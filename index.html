@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>برنامج البيت اليومي</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: linear-gradient(135deg, #0f3d2e 0%, #1a5c42 100%);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+    color: #1a1a1a;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  .header { text-align: center; color: #fff; margin-bottom: 20px; }
+  .header h1 { font-size: 22px; font-weight: 700; }
+  .header .date { font-size: 14px; opacity: 0.85; margin-top: 4px; }
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card-label {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+    padding: 4px 12px; border-radius: 20px; display: inline-block; margin-bottom: 10px;
+  }
+  .khidma .card-label { background: #fdecea; color: #c0392b; }
+  .daam .card-label { background: #e8f6ee; color: #1a7a4c; }
+  .maa .card-label { background: #e8f1fd; color: #1a5c9c; }
+  .card-name { font-size: 24px; font-weight: 800; color: #1a1a1a; }
+  .card-name .orig-name { font-size: 14px; font-weight: 500; color: #aaa; text-decoration: line-through; margin-inline-start: 8px; }
+  .card-sub { font-size: 12px; color: #888; margin-top: 4px; }
+  .card.swapped { outline: 2px solid #e08e00; outline-offset: -2px; }
+  .swap-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #fff4e0; color: #b45f00; font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px; margin-top: 6px;
+  }
+  .swap-btn {
+    background: #f2f2f2; border: none; border-radius: 10px;
+    padding: 6px 10px; font-size: 12px; cursor: pointer; color: #444; white-space: nowrap;
+  }
+  .swap-btn:active { opacity: 0.8; }
+  .swap-panel { margin-top: 10px; display: none; }
+  .swap-panel.open { display: block; }
+  select, input[type=text], input[type=number] {
+    width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd;
+    font-size: 14px; margin-top: 6px; font-family: inherit;
+  }
+  .btn {
+    display: block; width: 100%; background: #1a5c42; color: #fff; border: none;
+    border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 700;
+    margin-top: 8px; cursor: pointer;
+  }
+  .btn.secondary { background: #444; }
+  .btn.small { padding: 9px; font-size: 13px; }
+  .btn:active { opacity: 0.85; }
+  .btn:disabled { opacity: 0.5; }
+  .section {
+    background: #fff; border-radius: 18px; padding: 16px 20px; margin-top: 14px;
+  }
+  .section h2 { font-size: 15px; color: #333; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #eee; }
+  th { color: #888; font-weight: 600; }
+  tr.today { background: #f2f9f5; font-weight: 700; }
+  .copied { text-align: center; color: #d9fbe8; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  .status { text-align: center; font-size: 12px; color: #999; margin-top: 6px; min-height: 14px; }
+  .list-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;
+  }
+  .list-item:last-child { border-bottom: none; }
+  .list-item .meta { color: #999; font-size: 11px; }
+  .empty { color: #aaa; font-size: 13px; text-align: center; padding: 10px 0; }
+  .total-row { font-weight: 700; padding-top: 8px; border-top: 2px solid #eee; margin-top: 4px; }
+  .tabs { display: flex; gap: 6px; margin-top: 12px; }
+  .tab {
+    flex: 1; text-align: center; padding: 8px; border-radius: 10px;
+    font-size: 12px; background: #f2f2f2; color: #666; cursor: pointer;
+  }
+  .tab.active { background: #1a5c42; color: #fff; }
+  .hidden { display: none; }
+  .admin-only { display: none; }
+  .shared-note { font-size: 11px; color: #b45309; background: #fff8e6; padding: 8px 10px; border-radius: 10px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>🏠 برنامج البيت اليومي</h1>
+    <div class="date" id="todayDate"></div>
+    <button class="btn small" id="adminBtn" style="margin-top:10px; background:#2c2c2c;" onclick="toggleAdmin()">🔒 دخول كمسؤول</button>
+  </div>
+
+  <!-- التنبيه الصوتي عند دورك في الخدمة -->
+  <div class="card" style="padding:14px 16px;">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <span style="font-size:13px; font-weight:600; white-space:nowrap;">🔔 أنا:</span>
+      <select id="myNameSelect" style="margin-top:0; flex:1; min-width:120px;"></select>
+    </div>
+    <button class="btn small" id="enableSoundBtn" style="margin-top:8px; background:#1a5c9c;" onclick="enableMyAlert()">🔊 تفعيل التنبيه الصوتي في هذا الهاتف</button>
+    <div class="status" id="myAlertStatus" style="margin-top:4px;"></div>
+  </div>
+  <div class="card" id="myTurnBanner" style="display:none; background:#fff4e0; border:2px solid #e08e00; text-align:center;">
+    <div style="font-size:16px; font-weight:800; color:#b45f00;">🔔 اليوم عليك الخدمة!</div>
+    <div style="font-size:12px; color:#8a6100; margin-top:4px;">لا تنسَ، اليوم دورك</div>
+  </div>
+
+  <!-- الخدمة -->
+  <div class="card khidma">
+    <div class="card-top">
+      <div>
+        <span class="card-label">🧹 الخدمة</span>
+        <div class="card-name" id="khidmaName">—</div>
+        <div class="card-sub" id="khidmaSub">حسب يوم الأسبوع</div>
+      </div>
+      <button class="swap-btn" onclick="togglePanel('khidma')">🔄 بدل</button>
+    </div>
+    <div class="swap-panel" id="panel-khidma">
+      <select id="select-khidma"></select>
+      <button class="btn small" onclick="doSwap('khidma')">تأكيد التبديل لليوم</button>
+    </div>
+  </div>
+
+  <!-- الدعم -->
+  <div class="card daam">
+    <div class="card-top">
+      <div>
+        <span class="card-label">💰 الدعم</span>
+        <div class="card-name" id="daamName">—</div>
+        <div class="card-sub" id="daamSub">بالتناوب اليومي</div>
+      </div>
+      <button class="swap-btn" onclick="togglePanel('daam')">🔄 بدل</button>
+    </div>
+    <div class="swap-panel" id="panel-daam">
+      <select id="select-daam"></select>
+      <button class="btn small" onclick="doSwap('daam')">تأكيد التبديل لليوم</button>
+    </div>
+  </div>
+
+  <!-- الماء -->
+  <div class="card maa">
+    <div class="card-top">
+      <div>
+        <span class="card-label">💧 الماء</span>
+        <div class="card-name" id="maaName">—</div>
+        <div class="card-sub" id="maaSub">الدور الحالي</div>
+      </div>
+      <button class="swap-btn" onclick="togglePanel('maa')">🔄 بدل</button>
+    </div>
+    <div class="swap-panel" id="panel-maa">
+      <select id="select-maa"></select>
+      <button class="btn small" onclick="doSwap('maa')">تأكيد التبديل لليوم</button>
+    </div>
+    <button class="btn small admin-only" style="background:#1a5c9c;" onclick="buyMaa()">🛒 شراء الماء - الدور ينتقل للشخص التالي</button>
+  </div>
+
+  <button class="btn" onclick="copyMessage()">📋 نسخ الرسالة لإرسالها في المجموعة</button>
+  <div class="copied" id="copiedMsg"></div>
+  <div class="status" id="syncStatus"></div>
+
+  <!-- جدول الأسبوع -->
+  <div class="section">
+    <h2>📅 جدول الأسبوع</h2>
+    <table>
+      <tr><th>اليوم</th><th>الخدمة</th><th>الدعم</th></tr>
+      <tbody id="weekBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ترتيب التناوب -->
+  <div class="section">
+    <h2>🔁 ترتيب التناوب (من التالي بعد من)</h2>
+    <div style="font-size:13px; margin-bottom:10px;">
+      <b>💰 الدعم:</b> <span id="daamOrder"></span>
+    </div>
+    <div style="font-size:13px;">
+      <b>💧 الماء:</b> <span id="maaOrder"></span>
+    </div>
+  </div>
+
+  <!-- سجل شراء الماء -->
+  <div class="section">
+    <h2>🧾 سجل شراء الماء</h2>
+    <div id="maaLogList"></div>
+  </div>
+
+  <!-- إدارة الأشخاص -->
+  <div class="section admin-only">
+    <h2>👥 إدارة الأشخاص</h2>
+
+    <div style="margin-bottom:16px;">
+      <b style="font-size:13px;">🧹 الخدمة — تعيين شخص لكل يوم</b>
+      <div id="khidmaWeekdayManage" style="margin-top:8px;"></div>
+      <b style="font-size:13px; display:block; margin-top:10px;">قائمة أشخاص الخدمة</b>
+      <div id="khidmaPoolManage" style="margin-top:6px;"></div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="text" id="newKhidmaName" placeholder="اسم جديد">
+        <button class="btn small" style="width:auto; white-space:nowrap;" onclick="addPerson('khidma')">➕ إضافة</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <b style="font-size:13px;">💰 الدعم (ترتيب التناوب)</b>
+      <div id="daamManage" style="margin-top:8px;"></div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="text" id="newDaamName" placeholder="اسم جديد">
+        <button class="btn small" style="width:auto; white-space:nowrap;" onclick="addPerson('daam')">➕ إضافة</button>
+      </div>
+    </div>
+
+    <div>
+      <b style="font-size:13px;">💧 الماء (ترتيب التناوب)</b>
+      <div id="maaManage" style="margin-top:8px;"></div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="text" id="newMaaName" placeholder="اسم جديد">
+        <button class="btn small" style="width:auto; white-space:nowrap;" onclick="addPerson('maa')">➕ إضافة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- تسجيل غياب/تقصير -->
+  <div class="section">
+    <h2>⚠️ تسجيل غياب / تقصير</h2>
+    <select id="absenceRole">
+      <option value="khidma">الخدمة</option>
+      <option value="daam">الدعم</option>
+      <option value="maa">الماء</option>
+    </select>
+    <input type="text" id="absenceNote" placeholder="ملاحظة (اختياري)">
+    <button class="btn small secondary" onclick="addAbsence()">تسجيل غياب اليوم</button>
+    <div id="absenceList" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- مصاريف مشتركة -->
+  <div class="section">
+    <h2>💵 مصاريف مشتركة</h2>
+    <select id="expensePerson"></select>
+    <input type="number" id="expenseAmount" placeholder="المبلغ">
+    <input type="text" id="expenseNote" placeholder="على ماذا؟ (اختياري)">
+    <button class="btn small secondary" onclick="addExpense()">تسجيل مصروف</button>
+    <div id="expenseList" style="margin-top:10px;"></div>
+    <div class="total-row" id="expenseTotal"></div>
+  </div>
+
+  <!-- ملخص الشهر -->
+  <div class="section">
+    <h2>📊 ملخص الشهر (عدد مرات كل شخص)</h2>
+    <div id="monthSummary"></div>
+  </div>
+
+  <div class="shared-note">✅ التبديلات والغياب والمصاريف تتزامن تلقائيًا وفوريًا لدى جميع من يفتحون التطبيق، دون الحاجة لإعادة تحميل الصفحة.</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ===================== إعداد Firebase (تخزين مشترك حقيقي) ===================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAhsIiLvI9ckPrpBI0aX801lJYSEVdVuYI",
+  authDomain: "dar-app-be4ed.firebaseapp.com",
+  databaseURL: "https://dar-app-be4ed-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "dar-app-be4ed",
+  storageBucket: "dar-app-be4ed.firebasestorage.app",
+  messagingSenderId: "640615693338",
+  appId: "1:640615693338:web:0e14d0bc544263c34d25a3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ===================== البيانات الثابتة (افتراضية، قابلة للتعديل) ===================== */
+const DEFAULT_KHIDMA_BY_WEEKDAY = {
+  6: "أحمد", 0: "فاضل", 1: "مصطفى", 2: "الحافظ حيده",
+  3: "عليه شداد", 4: "باه", 5: "محمد لمين"
+};
+const DEFAULT_KHIDMA_ALL = ["أحمد","فاضل","مصطفى","الحافظ حيده","عليه شداد","باه","محمد لمين"];
+const DEFAULT_DAAM_LIST = ["ولهل","مصطفى","محمد الأمين","إبراهيم","محمدفال","كابر","زايد","خطري","عليه"];
+const DEFAULT_MAA_LIST = ["زايد","كابر","محمد فال","محمد لمين","براهيم","عليه","خطري","ولهلو","مصطفي"];
+
+let khidmaByWeekday = JSON.parse(JSON.stringify(DEFAULT_KHIDMA_BY_WEEKDAY));
+let khidmaAll = [...DEFAULT_KHIDMA_ALL];
+let daamList = [...DEFAULT_DAAM_LIST];
+let maaList = [...DEFAULT_MAA_LIST];
+// الماء ماشي بحساب التاريخ: الشخص كيبقى عليه الدور حتى يشري، ومن بعد كيدوز للي بعدو
+
+const startDate = new Date(2026, 6, 31); // 8 غشت = عليه، 9 غشت = ولهل
+
+function computeAllPeople() {
+  return [...new Set([...khidmaAll, ...daamList, ...maaList])];
+}
+let allPeople = computeAllPeople();
+
+const ADMIN_PIN = "1829";
+let isAdmin = false;
+
+function toggleAdmin() {
+  if (isAdmin) {
+    isAdmin = false;
+    updateAdminUI();
+    return;
+  }
+  const entered = prompt("أدخل الرمز السري:");
+  if (entered === ADMIN_PIN) {
+    isAdmin = true;
+    updateAdminUI();
+  } else if (entered !== null) {
+    alert("الرمز غير صحيح");
+  }
+}
+function updateAdminUI() {
+  const btn = document.getElementById('adminBtn');
+  btn.textContent = isAdmin ? "🔓 وضع المسؤول (اضغط للخروج)" : "🔒 دخول كمسؤول";
+  btn.style.background = isAdmin ? "#1a7a4c" : "#2c2c2c";
+  document.querySelectorAll('.swap-btn').forEach(b => b.style.display = isAdmin ? 'inline-block' : 'none');
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+  document.getElementById('absenceRole').disabled = !isAdmin;
+  document.getElementById('absenceNote').disabled = !isAdmin;
+  document.querySelector('button[onclick="addAbsence()"]').disabled = !isAdmin;
+  document.getElementById('expensePerson').disabled = !isAdmin;
+  document.getElementById('expenseAmount').disabled = !isAdmin;
+  document.getElementById('expenseNote').disabled = !isAdmin;
+  document.querySelector('button[onclick="addExpense()"]').disabled = !isAdmin;
+  if (!isAdmin) {
+    document.querySelectorAll('.swap-panel').forEach(p => p.classList.remove('open'));
+  }
+  renderAll();
+}
+
+const weekdayNames = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+const roleNames = { khidma: "الخدمة", daam: "الدعم", maa: "الماء" };
+
+/* ===================== حسابات التاريخ ===================== */
+function dayDiff(a, b) {
+  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((utcA - utcB) / (24*60*60*1000));
+}
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getKhidmaBase(d) { return khidmaByWeekday[d.getDay()]; }
+function getDaamBase(d) {
+  let idx = dayDiff(d, startDate) % daamList.length;
+  if (idx < 0) idx += daamList.length;
+  return daamList[idx];
+}
+function getMaaCurrent() {
+  if (!maaList.length) return '—';
+  return maaList[maaState.index % maaList.length];
+}
+function formatDate(d) {
+  const months = ["يناير","فبراير","مارس","أبريل","ماي","يونيو","يوليوز","غشت","شتنبر","أكتوبر","نونبر","دجنبر"];
+  return `${weekdayNames[d.getDay()]}، ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+const today = new Date();
+const todayKey = dateKey(today);
+
+/* ===================== التخزين المشترك ===================== */
+let overrides = {};   // { "2026-08-08": { khidma: "اسم", daam: "اسم", maa: "اسم" } }
+let absences = [];    // [{id,date,role,person,note}]
+let expenses = [];     // [{id,date,person,amount,note}]
+let maaState = { index: 3, log: [] }; // index: دور الماء الحالي، log: [{id,person,date}] سجل الشراء
+
+function loadAll() {
+  setStatus('⏳ جارٍ الاتصال بالخادم...');
+  db.ref('/').on('value', (snapshot) => {
+    const data = snapshot.val() || {};
+    khidmaByWeekday = data.khidmaByWeekday
+      ? Object.assign(JSON.parse(JSON.stringify(DEFAULT_KHIDMA_BY_WEEKDAY)), data.khidmaByWeekday)
+      : JSON.parse(JSON.stringify(DEFAULT_KHIDMA_BY_WEEKDAY));
+    khidmaAll = data.khidmaAll || [...DEFAULT_KHIDMA_ALL];
+    daamList = data.daamList || [...DEFAULT_DAAM_LIST];
+    maaList = data.maaList || [...DEFAULT_MAA_LIST];
+    overrides = data.overrides || {};
+    absences = data.absences || [];
+    expenses = data.expenses || [];
+    maaState = data.maaState || { index: 3, log: [] };
+    allPeople = computeAllPeople();
+    renderAll();
+    setStatus('✅ متزامن مباشرة مع الجميع');
+  }, (error) => {
+    setStatus('⚠️ لا يوجد اتصال بالخادم، تحقق من الإنترنت');
+  });
+}
+async function persistPeople() {
+  allPeople = computeAllPeople();
+  await saveKey('khidmaAll', khidmaAll);
+  await saveKey('daamList', daamList);
+  await saveKey('maaList', maaList);
+  await saveKey('khidmaByWeekday', khidmaByWeekday);
+}
+async function saveKey(key, value) {
+  try {
+    await db.ref(key).set(value);
+    return true;
+  } catch (e) {
+    setStatus('⚠️ لم يتم الحفظ، تحقق من الإنترنت وأعد المحاولة');
+    return false;
+  }
+}
+function setStatus(msg) { document.getElementById('syncStatus').textContent = msg; }
+
+/* ===================== القيم الفعلية (بعد التبديل) ===================== */
+function getRoleFor(role, d) {
+  const key = dateKey(d);
+  if (overrides[key] && overrides[key][role]) return overrides[key][role];
+  if (role === 'khidma') return getKhidmaBase(d);
+  if (role === 'daam') return getDaamBase(d);
+  if (role === 'maa') return key === todayKey ? getMaaCurrent() : undefined;
+}
+
+/* ===================== العرض ===================== */
+function renderAll() {
+  document.getElementById('todayDate').textContent = formatDate(today);
+
+  const kOv = overrides[todayKey] && overrides[todayKey].khidma;
+  const dOv = overrides[todayKey] && overrides[todayKey].daam;
+  const mOv = overrides[todayKey] && overrides[todayKey].maa;
+
+  setCardSwap('khidma', kOv, getKhidmaBase(today));
+  setCardSwap('daam', dOv, getDaamBase(today));
+  setCardSwap('maa', mOv, getMaaCurrent());
+
+  document.getElementById('khidmaSub').textContent = 'حسب يوم الأسبوع';
+  document.getElementById('daamSub').textContent = 'بالتناوب اليومي';
+  const lastBuy = maaState.log[0];
+  document.getElementById('maaSub').textContent = lastBuy
+    ? `آخر شراء: ${lastBuy.person} (${lastBuy.date})`
+    : 'الدور الحالي — لم يسجل شراء بعد';
+
+  // جدول الأسبوع
+  const weekBody = document.getElementById('weekBody');
+  weekBody.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const tr = document.createElement('tr');
+    if (i === 0) tr.className = 'today';
+    tr.innerHTML = `<td>${weekdayNames[d.getDay()]}</td><td>${getRoleFor('khidma',d)}</td><td>${getRoleFor('daam',d)}</td>`;
+    weekBody.appendChild(tr);
+  }
+
+  // قوائم التبديل
+  ['khidma','daam','maa'].forEach(role => {
+    const sel = document.getElementById('select-' + role);
+    const list = role === 'khidma' ? khidmaAll : role === 'daam' ? daamList : maaList;
+    sel.innerHTML = list.map(p => `<option value="${p}">${p}</option>`).join('');
+  });
+
+  renderAbsences();
+  renderExpenses();
+  renderSummary();
+  renderOrder();
+  renderMaaLog();
+  renderPeopleManagement();
+
+  // قائمة الأشخاص للمصاريف
+  const expSel = document.getElementById('expensePerson');
+  expSel.innerHTML = allPeople.map(p => `<option value="${p}">${p}</option>`).join('');
+
+  renderMyNameSelector();
+  checkMyTurn(false);
+}
+
+function renderOrder() {
+  const todayDaam = getRoleFor('daam', today);
+  const todayMaa = getMaaCurrent();
+  document.getElementById('daamOrder').innerHTML = daamList.map(p =>
+    p === todayDaam ? `<b style="color:#1a7a4c">[${p} ⬅️ اليوم]</b>` : p
+  ).join(' ← ');
+  document.getElementById('maaOrder').innerHTML = maaList.map(p =>
+    p === todayMaa ? `<b style="color:#1a5c9c">[${p} ⬅️ الدور الآن]</b>` : p
+  ).join(' ← ');
+}
+
+function setCardSwap(role, overridden, originalName) {
+  const nameEl = document.getElementById(role + 'Name');
+  const cardEl = nameEl.closest('.card');
+  if (overridden) {
+    nameEl.innerHTML = `${overridden} <span class="orig-name">${originalName}</span>`;
+    cardEl.classList.add('swapped');
+    let badge = cardEl.querySelector('.swap-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'swap-badge';
+      nameEl.insertAdjacentElement('afterend', badge);
+    }
+    badge.textContent = '🔄 مبدّل اليوم';
+  } else {
+    nameEl.textContent = originalName || '—';
+    cardEl.classList.remove('swapped');
+    const badge = cardEl.querySelector('.swap-badge');
+    if (badge) badge.remove();
+  }
+}
+
+function togglePanel(role) {
+  document.getElementById('panel-' + role).classList.toggle('open');
+}
+
+async function doSwap(role) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول للتبديل"); return; }
+  const newPerson = document.getElementById('select-' + role).value;
+  if (!overrides[todayKey]) overrides[todayKey] = {};
+  overrides[todayKey][role] = newPerson;
+  const ok = await saveKey('overrides', overrides);
+  if (ok) {
+    document.getElementById('panel-' + role).classList.remove('open');
+    renderAll();
+    flashCopied('✅ تم التبديل');
+  }
+}
+
+/* ===================== دور الماء (بحسب الشراء ماشي بحسب الأيام) ===================== */
+async function buyMaa() {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول لتسجيل شراء الماء"); return; }
+  const person = getMaaCurrent();
+  maaState.log.unshift({ id: Date.now(), person, date: todayKey });
+  maaState.index = (maaState.index + 1) % maaList.length;
+  const ok = await saveKey('maaState', maaState);
+  if (ok) {
+    renderAll();
+    flashCopied(`✅ ${person} اشترى الماء، الدور الآن لـ ${getMaaCurrent()}`);
+  }
+}
+function renderMaaLog() {
+  const el = document.getElementById('maaLogList');
+  const recent = maaState.log.slice(0, 8);
+  if (!recent.length) { el.innerHTML = '<div class="empty">لا يوجد أي شراء مسجل بعد</div>'; return; }
+  el.innerHTML = recent.map(l => `
+    <div class="list-item">
+      <div>💧 ${l.person}</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="meta">${l.date}</div>
+        ${isAdmin ? `<button class="swap-btn" style="color:#c0392b; padding:3px 8px;" onclick="deleteMaaLogEntry(${l.id}, this)">🗑</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+function deleteMaaLogEntry(id, btn) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول للحذف"); return; }
+  confirmAction('maalog-' + id, btn, () => doDeleteMaaLogEntry(id));
+}
+async function doDeleteMaaLogEntry(id) {
+  maaState.log = maaState.log.filter(l => l.id !== id);
+  const ok = await saveKey('maaState', maaState);
+  if (ok) { renderAll(); flashCopied('🗑️ تم حذف التسجيل'); }
+}
+
+/* ===================== الغياب ===================== */
+async function addAbsence() {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول لتسجيل غياب"); return; }
+  const role = document.getElementById('absenceRole').value;
+  const note = document.getElementById('absenceNote').value.trim();
+  const person = getRoleFor(role, today);
+  const record = { id: Date.now(), date: todayKey, role, person, note };
+  absences.unshift(record);
+  const ok = await saveKey('absences', absences);
+  if (ok) {
+    document.getElementById('absenceNote').value = '';
+    renderAll();
+  }
+}
+function renderAbsences() {
+  const el = document.getElementById('absenceList');
+  const recent = absences.slice(0, 8);
+  if (!recent.length) { el.innerHTML = '<div class="empty">لا يوجد أي غياب مسجل</div>'; return; }
+  el.innerHTML = recent.map(a => `
+    <div class="list-item">
+      <div>⚠️ ${a.person} — ${roleNames[a.role]}${a.note ? ' · ' + a.note : ''}</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="meta">${a.date}</div>
+        ${isAdmin ? `<button class="swap-btn" style="color:#c0392b; padding:3px 8px;" onclick="deleteAbsence(${a.id}, this)">🗑</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+function deleteAbsence(id, btn) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول للحذف"); return; }
+  confirmAction('absence-' + id, btn, () => doDeleteAbsence(id));
+}
+async function doDeleteAbsence(id) {
+  absences = absences.filter(a => a.id !== id);
+  const ok = await saveKey('absences', absences);
+  if (ok) { renderAll(); flashCopied('🗑️ تم حذف الغياب'); }
+}
+
+/* ===================== المصاريف ===================== */
+async function addExpense() {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول لتسجيل مصروف"); return; }
+  const person = document.getElementById('expensePerson').value;
+  const amount = parseFloat(document.getElementById('expenseAmount').value);
+  const note = document.getElementById('expenseNote').value.trim();
+  if (!amount || amount <= 0) { setStatus('⚠️ أدخل مبلغًا صحيحًا'); return; }
+  const record = { id: Date.now(), date: todayKey, person, amount, note };
+  expenses.unshift(record);
+  const ok = await saveKey('expenses', expenses);
+  if (ok) {
+    document.getElementById('expenseAmount').value = '';
+    document.getElementById('expenseNote').value = '';
+    renderAll();
+  }
+}
+function renderExpenses() {
+  const el = document.getElementById('expenseList');
+  const recent = expenses.slice(0, 8);
+  if (!recent.length) { el.innerHTML = '<div class="empty">لا يوجد أي مصروف مسجل</div>'; }
+  else {
+    el.innerHTML = recent.map(e => `
+      <div class="list-item">
+        <div>${e.person}${e.note ? ' · ' + e.note : ''}</div>
+        <div>${e.amount}${e.date === todayKey ? '' : ' <span class="meta">(' + e.date + ')</span>'}</div>
+      </div>
+    `).join('');
+  }
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  document.getElementById('expenseTotal').textContent = `المجموع الكلي: ${total}`;
+}
+
+/* ===================== ملخص الشهر ===================== */
+function renderSummary() {
+  const counts = {};
+  allPeople.forEach(p => counts[p] = { khidma: 0, daam: 0, maa: 0 });
+
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  for (let d = new Date(firstOfMonth); d <= today; d.setDate(d.getDate() + 1)) {
+    ['khidma','daam'].forEach(role => {
+      const p = getRoleFor(role, d);
+      if (counts[p]) counts[p][role]++;
+    });
+  }
+  // الماء كيتحسب من سجل الشراء الفعلي (ماشي بحساب الأيام)
+  const monthKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  maaState.log.forEach(entry => {
+    if (entry.date.startsWith(monthKey) && counts[entry.person]) counts[entry.person].maa++;
+  });
+
+  const rows = allPeople
+    .filter(p => counts[p].khidma + counts[p].daam + counts[p].maa > 0)
+    .sort((a,b) => (counts[b].khidma+counts[b].daam+counts[b].maa) - (counts[a].khidma+counts[a].daam+counts[a].maa));
+
+  const el = document.getElementById('monthSummary');
+  el.innerHTML = `
+    <table>
+      <tr><th>الاسم</th><th>خدمة</th><th>دعم</th><th>ماء (شراء)</th></tr>
+      ${rows.map(p => `<tr><td>${p}</td><td>${counts[p].khidma}</td><td>${counts[p].daam}</td><td>${counts[p].maa}</td></tr>`).join('')}
+    </table>
+  `;
+}
+
+/* ===================== نسخ الرسالة ===================== */
+function copyMessage() {
+  const msg = `📋 برنامج اليوم (${formatDate(today)})\n🧹 الخدمة: ${getRoleFor('khidma',today)}\n💰 الدعم: ${getRoleFor('daam',today)}\n💧 الماء: ${getRoleFor('maa',today)}`;
+  navigator.clipboard.writeText(msg).then(() => {
+    flashCopied('✅ تم النسخ، الآن الصقها في المجموعة');
+  }).catch(() => {
+    document.getElementById('copiedMsg').textContent = msg;
+  });
+}
+/* ===================== تأكيد الحذف (بدون نافذة confirm، خدامة فكل متصفح) ===================== */
+let pendingConfirms = {};
+function confirmAction(key, btn, action) {
+  if (pendingConfirms[key]) {
+    clearTimeout(pendingConfirms[key]);
+    delete pendingConfirms[key];
+    btn.textContent = btn.dataset.orig || btn.textContent;
+    btn.style.background = '';
+    btn.style.color = '';
+    action();
+  } else {
+    if (!btn.dataset.orig) btn.dataset.orig = btn.textContent;
+    btn.textContent = '✅ تأكيد؟';
+    btn.style.background = '#c0392b';
+    btn.style.color = '#fff';
+    pendingConfirms[key] = setTimeout(() => {
+      btn.textContent = btn.dataset.orig;
+      btn.style.background = '';
+      btn.style.color = '';
+      delete pendingConfirms[key];
+    }, 4000);
+  }
+}
+function flashCopied(text) {
+  document.getElementById('copiedMsg').textContent = text;
+  setTimeout(() => document.getElementById('copiedMsg').textContent = '', 3000);
+}
+
+/* ===================== إدارة الأشخاص (إضافة/حذف/تعديل) ===================== */
+function renderPeopleManagement() {
+  renderKhidmaWeekdayManage();
+  renderPersonList('khidmaPoolManage', 'khidma', khidmaAll);
+  renderPersonList('daamManage', 'daam', daamList);
+  renderPersonList('maaManage', 'maa', maaList);
+}
+
+function renderKhidmaWeekdayManage() {
+  const el = document.getElementById('khidmaWeekdayManage');
+  if (!khidmaAll.length) { el.innerHTML = '<div class="empty">أضف شخصًا أولًا</div>'; return; }
+  el.innerHTML = weekdayNames.map((name, idx) => `
+    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+      <span style="font-size:12px; width:70px; flex-shrink:0;">${name}</span>
+      <select onchange="assignKhidmaWeekday(${idx}, this.value)" style="margin-top:0;">
+        ${khidmaAll.map(p => `<option value="${p}" ${khidmaByWeekday[idx] === p ? 'selected' : ''}>${p}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+}
+
+function renderPersonList(containerId, role, list) {
+  const el = document.getElementById(containerId);
+  if (!list.length) { el.innerHTML = '<div class="empty">لا يوجد أي اسم، أضف واحدًا</div>'; return; }
+  el.innerHTML = list.map(p => `
+    <div class="list-item">
+      <input type="text" value="${p}" style="margin-top:0; flex:1;"
+        onchange='renamePerson("${role}", ${JSON.stringify(p)}, this.value)'>
+      <button class="swap-btn" style="margin-inline-start:6px; color:#c0392b;"
+        onclick='deletePerson("${role}", ${JSON.stringify(p)}, this)'>🗑</button>
+    </div>
+  `).join('');
+}
+
+async function addPerson(role) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول"); return; }
+  const inputId = role === 'khidma' ? 'newKhidmaName' : role === 'daam' ? 'newDaamName' : 'newMaaName';
+  const input = document.getElementById(inputId);
+  const name = input.value.trim();
+  if (!name) return;
+  const list = role === 'khidma' ? khidmaAll : role === 'daam' ? daamList : maaList;
+  if (list.includes(name)) { alert('هذا الاسم موجود بالفعل في هذه القائمة'); return; }
+  list.push(name);
+  input.value = '';
+  await persistPeople();
+  renderAll();
+  flashCopied(`✅ تمت إضافة ${name}`);
+}
+
+function deletePerson(role, name, btn) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول"); return; }
+  confirmAction('person-' + role + '-' + name, btn, () => doDeletePerson(role, name));
+}
+async function doDeletePerson(role, name) {
+  if (role === 'khidma') {
+    khidmaAll = khidmaAll.filter(p => p !== name);
+    Object.keys(khidmaByWeekday).forEach(day => {
+      if (khidmaByWeekday[day] === name) khidmaByWeekday[day] = khidmaAll[0] || '';
+    });
+  } else if (role === 'daam') {
+    daamList = daamList.filter(p => p !== name);
+  } else if (role === 'maa') {
+    maaList = maaList.filter(p => p !== name);
+  }
+  await persistPeople();
+  renderAll();
+  flashCopied(`🗑️ تم حذف ${name}`);
+}
+
+async function renamePerson(role, oldName, newName) {
+  if (!isAdmin) { renderAll(); return; }
+  newName = newName.trim();
+  if (!newName || newName === oldName) { renderAll(); return; }
+  const targetList = role === 'khidma' ? khidmaAll : role === 'daam' ? daamList : maaList;
+  if (targetList.includes(newName)) { alert('هذا الاسم موجود بالفعل في هذه القائمة'); renderAll(); return; }
+
+  if (role === 'khidma') {
+    khidmaAll = khidmaAll.map(p => p === oldName ? newName : p);
+    Object.keys(khidmaByWeekday).forEach(day => {
+      if (khidmaByWeekday[day] === oldName) khidmaByWeekday[day] = newName;
+    });
+  } else if (role === 'daam') {
+    daamList = daamList.map(p => p === oldName ? newName : p);
+  } else if (role === 'maa') {
+    maaList = maaList.map(p => p === oldName ? newName : p);
+  }
+
+  // تحديث الاسم فالسجل التاريخي (التبديلات، الغياب، المصاريف، شراء الماء) باش يبقى متوافق
+  Object.values(overrides).forEach(day => {
+    Object.keys(day).forEach(r => { if (day[r] === oldName) day[r] = newName; });
+  });
+  absences.forEach(a => { if (a.person === oldName) a.person = newName; });
+  expenses.forEach(e => { if (e.person === oldName) e.person = newName; });
+  maaState.log.forEach(l => { if (l.person === oldName) l.person = newName; });
+
+  await persistPeople();
+  await saveKey('overrides', overrides);
+  await saveKey('absences', absences);
+  await saveKey('expenses', expenses);
+  await saveKey('maaState', maaState);
+  renderAll();
+  flashCopied(`✏️ تم تغيير الاسم إلى ${newName}`);
+}
+
+async function assignKhidmaWeekday(dayIdx, name) {
+  if (!isAdmin) { renderAll(); return; }
+  khidmaByWeekday[dayIdx] = name;
+  await persistPeople();
+  renderAll();
+}
+
+/* ===================== التنبيه الصوتي عند دور الخدمة/الدعم/الماء ===================== */
+let myName = localStorage.getItem('myName') || '';
+let soundEnabled = localStorage.getItem('soundEnabled') === '1';
+let alreadyAlertedToday = sessionStorage.getItem('alertedFor') === todayKey;
+
+function renderMyNameSelector() {
+  const sel = document.getElementById('myNameSelect');
+  const options = ['<option value="">— اختر اسمك —</option>']
+    .concat(allPeople.map(p => `<option value="${p}" ${p === myName ? 'selected' : ''}>${p}</option>`));
+  sel.innerHTML = options.join('');
+  sel.onchange = () => {
+    myName = sel.value;
+    localStorage.setItem('myName', myName);
+    checkMyTurn(true);
+  };
+  updateAlertStatusText();
+}
+
+function updateAlertStatusText() {
+  const st = document.getElementById('myAlertStatus');
+  st.textContent = soundEnabled ? '✅ الصوت مفعّل في هذا الهاتف' : '⚠️ يجب الضغط على الزر لتفعيل الصوت';
+}
+
+function enableMyAlert() {
+  soundEnabled = true;
+  localStorage.setItem('soundEnabled', '1');
+  updateAlertStatusText();
+  unlockAudio();
+  playBeep(); // نغمة تجريبية للتأكد من أنها تعمل
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  checkMyTurn(false);
+}
+
+/* الصوت في المتصفح لا يعمل تلقائيًا إلا بعد أي لمسة من المستخدم في كل جلسة.
+   لذلك نفتح (unlock) سياق الصوت مع أول لمسة في أي مكان بالصفحة،
+   حتى لا يُضطر المستخدم للضغط على زر التفعيل في كل مرة. */
+let sharedAudioCtx = null;
+function getAudioCtx() {
+  if (!sharedAudioCtx) {
+    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return sharedAudioCtx;
+}
+function unlockAudio() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+  } catch (e) { /* الصوت لا يعمل في هذا المتصفح */ }
+}
+document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true });
+
+function playBeep() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const playTone = (delay) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.35);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.4);
+    };
+    playTone(0); playTone(0.45); playTone(0.9);
+  } catch (e) { /* الصوت لا يعمل في هذا المتصفح */ }
+}
+
+function checkMyTurn(playSoundIfMatch) {
+  const banner = document.getElementById('myTurnBanner');
+  if (!myName) { banner.style.display = 'none'; return; }
+
+  const myRoles = [];
+  if (getRoleFor('khidma', today) === myName) myRoles.push('🧹 الخدمة');
+  if (getRoleFor('daam', today) === myName) myRoles.push('💰 الدعم');
+  if (getMaaCurrent() === myName) myRoles.push('💧 الماء');
+
+  if (myRoles.length) {
+    banner.style.display = 'block';
+    banner.querySelector('div:first-child').textContent = `🔔 اليوم عليك: ${myRoles.join(' و ')}`;
+  } else {
+    banner.style.display = 'none';
+  }
+
+  if (myRoles.length && playSoundIfMatch && !alreadyAlertedToday) {
+    alreadyAlertedToday = true;
+    sessionStorage.setItem('alertedFor', todayKey);
+    if (soundEnabled) playBeep();
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🔔 اليوم عليك دور!', { body: myRoles.join(' و ') + ' — برنامج البيت اليومي' });
+    }
+  }
+}
+
+loadAll();
+updateAdminUI();
+renderMyNameSelector();
+checkMyTurn(true);
+</script>
+</body>
+</html>
