@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>برنامج البيت اليومي</title>
+
+<!-- إعدادات التطبيق المثبّت على الشاشة الرئيسية (PWA) -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f4c5c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="برنامج البيت">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: linear-gradient(135deg, #0f3d2e 0%, #1a5c42 100%);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+    color: #1a1a1a;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  .header { text-align: center; color: #fff; margin-bottom: 20px; }
+  .header h1 { font-size: 22px; font-weight: 700; }
+  .header .date { font-size: 14px; opacity: 0.85; margin-top: 4px; }
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card-label {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+    padding: 4px 12px; border-radius: 20px; display: inline-block; margin-bottom: 10px;
+  }
+  .khidma .card-label { background: #fdecea; color: #c0392b; }
+  .daam .card-label { background: #e8f6ee; color: #1a7a4c; }
+  .maa .card-label { background: #e8f1fd; color: #1a5c9c; }
+  .warag .card-label { background: #f3e8fd; color: #6a1a9c; }
+  .card-name { font-size: 24px; font-weight: 800; color: #1a1a1a; }
+  .card-name .orig-name { font-size: 14px; font-weight: 500; color: #aaa; text-decoration: line-through; margin-inline-start: 8px; }
+  .card-sub { font-size: 12px; color: #888; margin-top: 4px; }
+  .card.swapped { outline: 2px solid #e08e00; outline-offset: -2px; }
+  .swap-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #fff4e0; color: #b45f00; font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px; margin-top: 6px;
+  }
+  .swap-btn {
+    background: #f2f2f2; border: none; border-radius: 10px;
+    padding: 6px 10px; font-size: 12px; cursor: pointer; color: #444; white-space: nowrap;
+  }
+  .swap-btn:active { opacity: 0.8; }
+  .swap-panel { margin-top: 10px; display: none; }
+  .swap-panel.open { display: block; }
+  select, input[type=text], input[type=number] {
+    width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd;
+    font-size: 14px; margin-top: 6px; font-family: inherit;
+  }
+  .btn {
+    display: block; width: 100%; background: #1a5c42; color: #fff; border: none;
+    border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 700;
+    margin-top: 8px; cursor: pointer;
+  }
+  .btn.secondary { background: #444; }
+  .btn.small { padding: 9px; font-size: 13px; }
+  .btn:active { opacity: 0.85; }
+  .btn:disabled { opacity: 0.5; }
+  .section {
+    background: #fff; border-radius: 18px; padding: 16px 20px; margin-top: 14px;
+  }
+  .section h2 { font-size: 15px; color: #333; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #eee; }
+  th { color: #888; font-weight: 600; }
+  tr.today { background: #f2f9f5; font-weight: 700; }
+  .copied { text-align: center; color: #d9fbe8; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  .status { text-align: center; font-size: 12px; color: #999; margin-top: 6px; min-height: 14px; }
+  .list-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;
+  }
+  .list-item:last-child { border-bottom: none; }
+  .list-item .meta { color: #999; font-size: 11px; }
+  .empty { color: #aaa; font-size: 13px; text-align: center; padding: 10px 0; }
+  .total-row { font-weight: 700; padding-top: 8px; border-top: 2px solid #eee; margin-top: 4px; }
+  .tabs { display: flex; gap: 6px; margin-top: 12px; }
+  .tab {
+    flex: 1; text-align: center; padding: 8px; border-radius: 10px;
+    font-size: 12px; background: #f2f2f2; color: #666; cursor: pointer;
+  }
+  .tab.active { background: #1a5c42; color: #fff; }
+  .hidden { display: none; }
+  .admin-only { display: none; }
+  .shared-note { font-size: 11px; color: #b45309; background: #fff8e6; padding: 8px 10px; border-radius: 10px; margin-top: 8px; }
+  @keyframes pulseBanner {
+    0%   { box-shadow: 0 0 0 0 rgba(224,142,0,0.55); }
+    70%  { box-shadow: 0 0 0 14px rgba(224,142,0,0); }
+    100% { box-shadow: 0 0 0 0 rgba(224,142,0,0); }
+  }
+  #myTurnBanner.pulsing { animation: pulseBanner 1.6s ease-out infinite; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>🏠 برنامج البيت اليومي</h1>
+    <div class="date" id="todayDate"></div>
+    <button class="btn small" id="adminBtn" style="margin-top:10px; background:#2c2c2c;" onclick="toggleAdmin()">🔒 دخول كمسؤول</button>
+  </div>
+
+  <!-- نافذة إدخال الرمز السري (بدل prompt العادي)، بحقل من نوع password يخفي الأرقام بنقاط -->
+  <div id="pinOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:999; align-items:center; justify-content:center; padding:20px;">
+    <div class="card" style="width:100%; max-width:340px; margin:0;">
+      <div style="font-size:15px; font-weight:700; margin-bottom:10px;">🔒 أدخل الرمز السري</div>
+      <input type="password" id="pinInput" inputmode="numeric" autocomplete="off"
+        style="letter-spacing:6px; font-size:18px; text-align:center;" placeholder="••••">
+      <div id="pinError" style="color:#c0392b; font-size:12px; min-height:16px; margin-top:6px;"></div>
+      <button class="btn small" style="margin-top:10px;" onclick="submitPin()">دخول</button>
+      <button class="btn small secondary" style="margin-top:6px;" onclick="closePinDialog()">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- تحذير إذا الصفحة مفتوحة من متصفح واتساب/فيسبوك الداخلي — الإشعارات ما تشتغل فيه وينمسح الاسم كل مرة -->
+  <div class="card" id="inAppWarning" style="display:none; background:#fdecea; border:2px solid #d93025; text-align:center;">
+    <div style="font-size:14px; font-weight:800; color:#b3261e;">⚠️ الإشعارات لن تشتغل في هذا المتصفح</div>
+    <div style="font-size:12.5px; color:#8a3a34; margin-top:6px; line-height:1.7;">
+      يبدو أنك فاتح البرنامج من داخل واتساب مباشرة، وهذا المتصفح لا يدعم الإشعارات وينسى اسمك كل مرة.<br>
+      اضغط ⋯ (النقاط الثلاث) أعلى الصفحة واختر <b>"فتح في Safari"</b>، أو انسخ الرابط وافتحه في Safari.
+    </div>
+    <button class="btn small" style="margin-top:10px; background:#b3261e;" onclick="copyPageLink()">🔗 نسخ الرابط لفتحه في Safari</button>
+  </div>
+
+  <!-- التنبيه الصوتي عند دورك في الخدمة -->
+  <div class="card" style="padding:14px 16px;">
+    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <span style="font-size:13px; font-weight:600; white-space:nowrap;">🔔 أنا:</span>
+      <select id="myNameSelect" style="margin-top:0; flex:1; min-width:120px;"></select>
+    </div>
+    <button class="btn small" id="enableSoundBtn" style="margin-top:8px; background:#1a5c9c;" onclick="enableMyAlert()">🔊 تفعيل التنبيه الصوتي في هذا الهاتف</button>
+    <button class="btn small secondary" style="margin-top:6px;" onclick="checkNotificationStatus()">🔍 فحص حالة الإشعارات</button>
+    <div class="status" id="myAlertStatus" style="margin-top:4px;"></div>
+  </div>
+  <div class="card" id="myTurnBanner" style="display:none; background:#fff4e0; border:2px solid #e08e00; text-align:center;">
+    <div style="font-size:16px; font-weight:800; color:#b45f00;" id="myTurnTitle">🔔 اليوم عليك الخدمة!</div>
+    <div style="font-size:12px; color:#8a6100; margin-top:4px;">لا تنسَ، اليوم دورك</div>
+    <button class="btn small" style="margin-top:10px; background:#b45f00;" onclick="dismissTurnBanner()">🔕 انتبهت – إيقاف التذكير</button>
+  </div>
+
+  <!-- الخدمة -->
+  <div class="card khidma">
+    <div class="card-top">
+      <div>
+        <span class="card-label">🧹 الخدمة</span>
+        <div class="card-name" id="khidmaName">—</div>
+        <div class="card-sub" id="khidmaSub">حسب يوم الأسبوع</div>
+      </div>
+      <button class="swap-btn" onclick="togglePanel('khidma')">🔄 بدل</button>
+    </div>
+    <div class="swap-panel" id="panel-khidma">
+      <select id="select-khidma"></select>
+      <button class="btn small" onclick="doSwap('khidma')">تأكيد التبديل لليوم</button>
+    </div>
+  </div>
+
+  <!-- الدعم -->
+  <div class="card daam">
+    <div class="card-top">
+      <div>
+        <span class="card-label">💰 الدعم</span>
+        <div class="card-name" id="daamName">—</div>
+        <div class="card-sub" id="daamSub">بالتناوب اليومي</div>
+      </div>
+      <button class="swap-btn" onclick="togglePanel('daam')">🔄 بدل</button>
+    </div>
+    <div class="swap-panel" id="panel-daam">
+      <select id="select-daam"></select>
+      <button class="btn small" onclick="doSwap('daam')">تأكيد التبديل لليوم</button>
+    </div>
+  </div>
+
+  <!-- الماء -->
+  <div class="card maa">
+    <div class="card-top">
+      <div>
+        <span class="card-label">💧 الماء</span>
+        <div class="card-name" id="maaName">—</div>
+        <div class="card-sub" id="maaSub">الدور الحالي</div>
+      </div>
+      <button class="swap-btn" onclick="togglePanel('maa')">🔄 بدل</button>
+    </div>
+    <div class="swap-panel" id="panel-maa">
+      <select id="select-maa"></select>
+      <button class="btn small" onclick="doSwap('maa')">تأكيد التبديل لليوم</button>
+    </div>
+    <button class="btn small admin-only" style="background:#1a5c9c;" onclick="buyMaa()">🛒 شراء الماء - الدور ينتقل للشخص التالي</button>
+  </div>
+
+  <!-- الورگ -->
+  <div class="card warag">
+    <div class="card-top">
+      <div>
+        <span class="card-label">📄 الورگ</span>
+        <div class="card-name" id="waragName">—</div>
+        <div class="card-sub" id="waragSub">الدور الحالي</div>
+      </div>
+      <button class="swap-btn" onclick="togglePanel('warag')">🔄 بدل</button>
+    </div>
+    <div class="swap-panel" id="panel-warag">
+      <select id="select-warag"></select>
+      <button class="btn small" onclick="doSwap('warag')">تأكيد التبديل لليوم</button>
+    </div>
+    <button class="btn small admin-only" style="background:#6a1a9c;" onclick="buyWarag()">✅ تسجيل الورگ - الدور ينتقل للشخص التالي</button>
+  </div>
+
+  <button class="btn" onclick="copyMessage()">📋 نسخ الرسالة لإرسالها في المجموعة</button>
+  <div class="copied" id="copiedMsg"></div>
+  <div class="status" id="syncStatus"></div>
+
+  <!-- جدول الأسبوع -->
+  <div class="section">
+    <h2>📅 جدول الأسبوع</h2>
+    <table>
+      <tr><th>اليوم</th><th>الخدمة</th><th>الدعم</th></tr>
+      <tbody id="weekBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ترتيب التناوب -->
+  <div class="section">
+    <h2>🔁 ترتيب التناوب (من التالي بعد من)</h2>
+    <div style="font-size:13px; margin-bottom:10px;">
+      <b>💰 الدعم:</b> <span id="daamOrder"></span>
+    </div>
+    <div style="font-size:13px; margin-bottom:10px;">
+      <b>💧 الماء:</b> <span id="maaOrder"></span>
+    </div>
+    <div style="font-size:13px;">
+      <b>📄 الورگ:</b> <span id="waragOrder"></span>
+    </div>
+  </div>
+
+  <!-- سجل شراء الماء -->
+  <div class="section">
+    <h2>🧾 سجل شراء الماء</h2>
+    <div id="maaLogList"></div>
+  </div>
+
+  <!-- سجل الورگ -->
+  <div class="section">
+    <h2>🧾 سجل الورگ</h2>
+    <div id="waragLogList"></div>
+  </div>
+
+  <!-- إدارة الأشخاص -->
+  <div class="section admin-only">
+    <h2>👥 إدارة الأشخاص</h2>
+
+    <div style="margin-bottom:16px;">
+      <b style="font-size:13px;">🧹 الخدمة — تعيين شخص لكل يوم</b>
+      <div id="khidmaWeekdayManage" style="margin-top:8px;"></div>
+      <b style="font-size:13px; display:block; margin-top:10px;">قائمة أشخاص الخدمة</b>
+      <div id="khidmaPoolManage" style="margin-top:6px;"></div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="text" id="newKhidmaName" placeholder="اسم جديد">
+        <button class="btn small" style="width:auto; white-space:nowrap;" onclick="addPerson('khidma')">➕ إضافة</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <b style="font-size:13px;">💰 الدعم (ترتيب التناوب)</b>
+      <div id="daamManage" style="margin-top:8px;"></div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="text" id="newDaamName" placeholder="اسم جديد">
+        <button class="btn small" style="width:auto; white-space:nowrap;" onclick="addPerson('daam')">➕ إضافة</button>
+      </div>
+      <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #ccc;">
+        <div style="font-size:12px; color:#666; margin-bottom:6px;">⚠️ إلا كان الترتيب الأساسي لليوم غلط (بدون ما يكون فيه تبديل)، صحّحه هنا بتحديد الشخص الصحيح لليوم — وهذا كيصلح الترتيب لكل الأيام الجايّة بلا ما تحتاج تبدّل يوميًا:</div>
+        <div style="display:flex; gap:6px;">
+          <select id="daamRecalSelect" style="flex:1;"></select>
+          <button class="btn small" style="width:auto; white-space:nowrap; background:#c0392b;" onclick="recalibrateDaam()">✅ تثبيت لليوم</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <b style="font-size:13px;">💧 الماء (ترتيب التناوب)</b>
+      <div id="maaManage" style="margin-top:8px;"></div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="text" id="newMaaName" placeholder="اسم جديد">
+        <button class="btn small" style="width:auto; white-space:nowrap;" onclick="addPerson('maa')">➕ إضافة</button>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <b style="font-size:13px;">📄 الورگ (ترتيب التناوب)</b>
+      <div id="waragManage" style="margin-top:8px;"></div>
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="text" id="newWaragName" placeholder="اسم جديد">
+        <button class="btn small" style="width:auto; white-space:nowrap;" onclick="addPerson('warag')">➕ إضافة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- تسجيل غياب/تقصير -->
+  <div class="section">
+    <h2>⚠️ تسجيل غياب / تقصير</h2>
+    <select id="absenceRole">
+      <option value="khidma">الخدمة</option>
+      <option value="daam">الدعم</option>
+      <option value="maa">الماء</option>
+      <option value="warag">الورگ</option>
+    </select>
+    <input type="text" id="absenceNote" placeholder="ملاحظة (اختياري)">
+    <button class="btn small secondary" onclick="addAbsence()">تسجيل غياب اليوم</button>
+    <div id="absenceList" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- مصاريف مشتركة -->
+  <div class="section">
+    <h2>💵 مصاريف مشتركة</h2>
+    <select id="expensePerson"></select>
+    <input type="number" id="expenseAmount" placeholder="المبلغ">
+    <input type="text" id="expenseNote" placeholder="على ماذا؟ (اختياري)">
+    <button class="btn small secondary" onclick="addExpense()">تسجيل مصروف</button>
+    <div id="expenseList" style="margin-top:10px;"></div>
+    <div class="total-row" id="expenseTotal"></div>
+  </div>
+
+  <!-- ملخص الشهر -->
+  <div class="section">
+    <h2>📊 ملخص الشهر (عدد مرات كل شخص)</h2>
+    <div id="monthSummary"></div>
+  </div>
+
+  <div class="shared-note">✅ التبديلات والغياب والمصاريف تتزامن تلقائيًا وفوريًا لدى جميع من يفتحون التطبيق، دون الحاجة لإعادة تحميل الصفحة.</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script>
+/* ===================== إعداد Firebase (تخزين مشترك حقيقي) ===================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAhsIiLvI9ckPrpBI0aX801lJYSEVdVuYI",
+  authDomain: "dar-app-be4ed.firebaseapp.com",
+  databaseURL: "https://dar-app-be4ed-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "dar-app-be4ed",
+  storageBucket: "dar-app-be4ed.firebasestorage.app",
+  messagingSenderId: "640615693338",
+  appId: "1:640615693338:web:0e14d0bc544263c34d25a3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+/* دخول مجهول (Anonymous Auth) إجباري قبل أي قراءة أو كتابة — بهذا الشكل لا يقدر أي أحد
+   يوصل لقاعدة البيانات مباشرة (عبر curl أو Postman مثلاً) بدون المرور بمصادقة Firebase الحقيقية.
+   هذا لا يبدّل شيئًا بالنسبة للمستخدم العادي، يصير تلقائيًا بمجرد فتح الصفحة. */
+let authReady = auth.signInAnonymously().catch(err => {
+  console.error('فشل الدخول المجهول لـ Firebase:', err);
+  setStatus('⚠️ تعذّر الاتصال الآمن بالخادم، تحقق من الإنترنت وأعد تحميل الصفحة');
+});
+
+/* ===================== إشعارات Push حقيقية (تصل حتى والتطبيق مقفول) =====================
+   نستعمل Firebase Cloud Messaging (FCM): كل هاتف كيسجل "توكن" خاص بيه فقاعدة البيانات،
+   وسكريبت خارجي (Google Apps Script) كيبعث إشعار لكل التوكنات المسجلة فالساعة 8 و10 مساءً. */
+const FCM_VAPID_KEY = "BO9AWV164X5OWYBhZYrEAlUiqeHsIVXx5cKMTawTj6kd6m95bbScjmIHqrVy3ccLwD1jvzp-vthuckAFygZy99c";
+let messaging = null;
+try {
+  if (firebase.messaging.isSupported()) {
+    messaging = firebase.messaging();
+  }
+} catch (e) {
+  console.error('Firebase Messaging غير مدعوم فهذا المتصفح:', e);
+}
+
+/* نسجل التوكن ديال هذا الهاتف فقاعدة البيانات، مربوط باسم الشخص (myName) إذا كان محدد.
+   كل هاتف كيسجل توكن مختلف، وهذا التوكن هو اللي سكريبت الإرسال غادي يستعملو باش يبعث الإشعار. */
+async function registerPushToken() {
+  if (!messaging) return;
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.register('sw.js');
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      setPushStatus('⚠️ لم يُسمح بالإشعارات، لن تصل التنبيهات لهذا الهاتف حتى لو التطبيق مقفول');
+      return;
+    }
+    const token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) {
+      setPushStatus('⚠️ تعذّر الحصول على رمز الإشعارات، أعد المحاولة');
+      return;
+    }
+    await authReady;
+    await db.ref('fcmTokens/' + token).set({
+      name: myName || null,
+      updatedAt: Date.now(),
+      ua: navigator.userAgent
+    });
+    setPushStatus('✅ الإشعارات (حتى والتطبيق مقفول) مفعّلة فهذا الهاتف');
+  } catch (err) {
+    console.error('خطأ أثناء تسجيل رمز الإشعارات:', err);
+    setPushStatus('⚠️ خطأ أثناء تفعيل الإشعارات، حاول من جديد');
+  }
+}
+
+function setPushStatus(msg) {
+  const el = document.getElementById('myAlertStatus');
+  if (el) el.textContent = msg;
+}
+
+/* ===================== فحص شامل لحالة الإشعارات (تشخيص) ===================== */
+async function checkNotificationStatus() {
+  const سطور = [];
+  const إضافة = (رمز, نص) => سطور.push(`${رمز} ${نص}`);
+
+  // 1) هل المتصفح يدعم Push أصلاً
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+    إضافة('❌', 'هذا المتصفح ما كيدعمش الإشعارات إطلاقًا');
+    alert(سطور.join('\n'));
+    return;
+  }
+  إضافة('✅', 'المتصفح كيدعم الإشعارات');
+
+  if (!messaging) {
+    إضافة('❌', 'Firebase Messaging ماشي مفعّل (isSupported رجّع false) — راجع Safari/الوضع الخاص');
+  } else {
+    إضافة('✅', 'Firebase Messaging مفعّل');
+  }
+
+  // 2) حالة إذن الإشعارات
+  const إذن = Notification.permission;
+  if (إذن === 'granted') إضافة('✅', 'الإذن معطى (granted)');
+  else if (إذن === 'denied') إضافة('❌', 'الإذن مرفوض من إعدادات الهاتف/المتصفح — خاصو يتفعل يدويًا');
+  else إضافة('⚠️', 'الإذن لم يُطلب بعد (default) — دوس على "تفعيل التنبيه الصوتي"');
+
+  // 3) تسجيل الـ Service Worker (sw.js)
+  let reg = null;
+  try {
+    reg = await navigator.serviceWorker.getRegistration();
+    إضافة(reg ? '✅' : '❌', reg ? 'sw.js مسجل بنجاح' : 'sw.js ماشي مسجل — الإشعارات فالخلفية ما غاتخدمش');
+  } catch (e) {
+    إضافة('❌', 'خطأ فالتحقق من sw.js: ' + e.message);
+  }
+
+  // 4) وجود التوكن محليًا
+  let token = null;
+  if (messaging && إذن === 'granted' && reg) {
+    try {
+      token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+      إضافة(token ? '✅' : '❌', token ? ('توكن موجود فهذا الهاتف: ' + token.substring(0, 16) + '…') : 'ماكاينش توكن محلي');
+    } catch (e) {
+      إضافة('❌', 'خطأ فجلب التوكن: ' + e.message);
+    }
+  } else {
+    إضافة('⚠️', 'تخطينا فحص التوكن (خاصو إذن + sw مسجل أولاً)');
+  }
+
+  // 5) هل التوكن مسجل فعليًا فقاعدة البيانات (Firebase)
+  if (token) {
+    try {
+      await authReady;
+      const snap = await db.ref('fcmTokens/' + token).once('value');
+      if (snap.exists()) {
+        const val = snap.val();
+        إضافة('✅', `التوكن مسجل فقاعدة البيانات (باسم: ${val.name || 'بدون اسم'})`);
+      } else {
+        إضافة('❌', 'التوكن غير مسجل فقاعدة البيانات — دوس "تفعيل التنبيه الصوتي" باش يتسجل');
+      }
+    } catch (e) {
+      إضافة('❌', 'خطأ فالتحقق من قاعدة البيانات: ' + e.message);
+    }
+  }
+
+  // 6) الاسم المختار محليًا
+  إضافة(myName ? '✅' : '⚠️', myName ? `الاسم المحدد فهذا الهاتف: ${myName}` : 'ماكاينش اسم محدد فهذا الهاتف بعد');
+
+  console.log(سطور.join('\n'));
+  alert('🔍 تشخيص حالة الإشعارات:\n\n' + سطور.join('\n'));
+}
+
+/* ===================== البيانات الثابتة (افتراضية، قابلة للتعديل) ===================== */
+const DEFAULT_KHIDMA_BY_WEEKDAY = {
+  6: "أحمد", 0: "فاضل", 1: "مصطفى", 2: "الحافظ حيده",
+  3: "عليه شداد", 4: "باه", 5: "محمد لمين"
+};
+const DEFAULT_KHIDMA_ALL = ["أحمد","فاضل","مصطفى","الحافظ حيده","عليه شداد","باه","محمد لمين"];
+const DEFAULT_DAAM_LIST = ["ولهل","مصطفى","محمد الأمين","إبراهيم","محمدفال","كابر","زايد","خطري","عليه"];
+const DEFAULT_MAA_LIST = ["زايد","كابر","محمد فال","محمد لمين","براهيم","عليه","خطري","ولهلو","مصطفي"];
+const DEFAULT_WARAG_LIST = ["زايد","كابر","محمد فال","محمد لمين","براهيم","عليه","خطري","ولهلو","مصطفي"];
+
+let khidmaByWeekday = JSON.parse(JSON.stringify(DEFAULT_KHIDMA_BY_WEEKDAY));
+let khidmaAll = [...DEFAULT_KHIDMA_ALL];
+let daamList = [...DEFAULT_DAAM_LIST];
+let daamOffset = 0; // إزاحة تُحفظ عند إضافة/حذف شخص من الدعم، حتى لا يتبدل ترتيب البقية
+let maaList = [...DEFAULT_MAA_LIST];
+let waragList = [...DEFAULT_WARAG_LIST];
+// الماء والورگ ماشيين بحساب الاستخدام: الشخص كيبقى عليه الدور حتى يُسجَّل، ومن بعد كيدوز للي بعدو
+
+const startDate = new Date(2026, 6, 31); // 8 غشت = عليه، 9 غشت = ولهل
+
+function computeAllPeople() {
+  return [...new Set([...khidmaAll, ...daamList, ...maaList, ...waragList])];
+}
+let allPeople = computeAllPeople();
+
+// الرمز السري مخزّن هنا كـ "بصمة" (SHA-256) وليس كنص صريح، حتى ما يكون ظاهرًا بشكل مباشر
+// لمن يفتح "عرض المصدر" لملف الصفحة. لتغيير الرمز السري: احسب SHA-256 للرمز الجديد
+// (مثلاً عبر: python3 -c "import hashlib;print(hashlib.sha256('الرمز_الجديد'.encode()).hexdigest())")
+// وضع الناتج هنا بدل القيمة الحالية.
+const ADMIN_PIN_HASH = "19e639b064bdb018bbf393d0f751e6e5e9934f70394531ab3f617513529ab264"; // بصمة الرمز 1829
+let isAdmin = false;
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function toggleAdmin() {
+  if (isAdmin) {
+    isAdmin = false;
+    updateAdminUI();
+    return;
+  }
+  openPinDialog();
+}
+
+function openPinDialog() {
+  const overlay = document.getElementById('pinOverlay');
+  const input = document.getElementById('pinInput');
+  document.getElementById('pinError').textContent = '';
+  input.value = '';
+  overlay.style.display = 'flex';
+  setTimeout(() => input.focus(), 50);
+  input.onkeydown = (e) => { if (e.key === 'Enter') submitPin(); };
+}
+
+function closePinDialog() {
+  document.getElementById('pinOverlay').style.display = 'none';
+}
+
+async function submitPin() {
+  const entered = document.getElementById('pinInput').value;
+  const enteredHash = await sha256Hex(entered);
+  if (enteredHash === ADMIN_PIN_HASH) {
+    isAdmin = true;
+    closePinDialog();
+    updateAdminUI();
+  } else {
+    document.getElementById('pinError').textContent = 'الرمز غير صحيح';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+function updateAdminUI() {
+  const btn = document.getElementById('adminBtn');
+  btn.textContent = isAdmin ? "🔓 وضع المسؤول (اضغط للخروج)" : "🔒 دخول كمسؤول";
+  btn.style.background = isAdmin ? "#1a7a4c" : "#2c2c2c";
+  document.querySelectorAll('.swap-btn').forEach(b => b.style.display = isAdmin ? 'inline-block' : 'none');
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+  document.getElementById('absenceRole').disabled = !isAdmin;
+  document.getElementById('absenceNote').disabled = !isAdmin;
+  document.querySelector('button[onclick="addAbsence()"]').disabled = !isAdmin;
+  document.getElementById('expensePerson').disabled = !isAdmin;
+  document.getElementById('expenseAmount').disabled = !isAdmin;
+  document.getElementById('expenseNote').disabled = !isAdmin;
+  document.querySelector('button[onclick="addExpense()"]').disabled = !isAdmin;
+  if (!isAdmin) {
+    document.querySelectorAll('.swap-panel').forEach(p => p.classList.remove('open'));
+  }
+  renderAll();
+}
+
+/* حماية من ثغرة XSS: أي اسم أو ملاحظة يدخلها المستخدم قد تحتوي رموز HTML خطيرة
+   (مثل < أو " أو ') وتُعرض تلقائيًا عند كل من يفتح التطبيق عبر المزامنة، لذلك
+   يجب "تعقيمها" دائمًا قبل إدراجها داخل innerHTML أو داخل أي attribute. */
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+const weekdayNames = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+const roleNames = { khidma: "الخدمة", daam: "الدعم", maa: "الماء", warag: "الورگ" };
+
+/* ===================== حسابات التاريخ ===================== */
+function dayDiff(a, b) {
+  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((utcA - utcB) / (24*60*60*1000));
+}
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getKhidmaBase(d) { return khidmaByWeekday[d.getDay()]; }
+function getDaamBase(d) {
+  let idx = (dayDiff(d, startDate) + daamOffset) % daamList.length;
+  if (idx < 0) idx += daamList.length;
+  return daamList[idx];
+}
+function getMaaCurrent() {
+  if (!maaList.length) return '—';
+  return maaList[maaState.index % maaList.length];
+}
+function getWaragCurrent() {
+  if (!waragList.length) return '—';
+  return waragList[waragState.index % waragList.length];
+}
+function formatDate(d) {
+  const months = ["يناير","فبراير","مارس","أبريل","ماي","يونيو","يوليوز","غشت","شتنبر","أكتوبر","نونبر","دجنبر"];
+  return `${weekdayNames[d.getDay()]}، ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/* اليوم "الفعلي" لأغراض الدور: يتبدل الساعة 10 مساءً بدل نصف الليل.
+   يعني من الساعة 22:00 وحتى 22:00 اليوم اللي بعدو، الدور المحسوب هو دور "الغد" التقويمي. */
+function getEffectiveDate(now) {
+  now = now || new Date();
+  const d = new Date(now);
+  if (d.getHours() >= 22) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+let today = getEffectiveDate();
+let todayKey = dateKey(today);
+
+/* ===================== التخزين المشترك ===================== */
+let overrides = {};   // { "2026-08-08": { khidma: "اسم", daam: "اسم", maa: "اسم" } }
+let absences = [];    // [{id,date,role,person,note}]
+let expenses = [];     // [{id,date,person,amount,note}]
+let maaState = { index: 3, log: [] }; // index: دور الماء الحالي، log: [{id,person,date}] سجل الشراء
+let waragState = { index: 0, log: [] }; // index: دور الورگ الحالي، log: [{id,person,date}] سجل التسجيل
+
+function loadAll() {
+  setStatus('⏳ جارٍ الاتصال بالخادم...');
+  db.ref('/').on('value', (snapshot) => {
+    try {
+      const data = snapshot.val() || {};
+      khidmaByWeekday = data.khidmaByWeekday
+        ? Object.assign(JSON.parse(JSON.stringify(DEFAULT_KHIDMA_BY_WEEKDAY)), data.khidmaByWeekday)
+        : JSON.parse(JSON.stringify(DEFAULT_KHIDMA_BY_WEEKDAY));
+      khidmaAll = data.khidmaAll || [...DEFAULT_KHIDMA_ALL];
+      daamList = data.daamList || [...DEFAULT_DAAM_LIST];
+      daamOffset = data.daamOffset || 0;
+      maaList = data.maaList || [...DEFAULT_MAA_LIST];
+      waragList = data.waragList || [...DEFAULT_WARAG_LIST];
+      overrides = data.overrides || {};
+      absences = data.absences || [];
+      expenses = data.expenses || [];
+      maaState = data.maaState || { index: 3, log: [] };
+      if (!Array.isArray(maaState.log)) maaState.log = [];
+      waragState = data.waragState || { index: 0, log: [] };
+      if (!Array.isArray(waragState.log)) waragState.log = [];
+      allPeople = computeAllPeople();
+
+      // نحدّث حالة الاتصال فور استلام البيانات فعليًا، قبل العرض،
+      // حتى لو صار خطأ بسيط بالعرض بعدها ما يبقى معلّق على "جاري الاتصال" بالغلط
+      setStatus('✅ متزامن مباشرة مع الجميع');
+
+      renderAll();
+      // كل مرة توصل بيانات جديدة (تبديل، إلخ) نتأكد فورًا هل الدور صار عليك
+      checkMyTurn(true);
+    } catch (err) {
+      console.error('خطأ أثناء معالجة/عرض البيانات:', err);
+      setStatus('⚠️ البيانات وصلت لكن صار خطأ بالعرض — أعد تحميل الصفحة');
+    }
+  }, (error) => {
+    console.error('خطأ اتصال Firebase:', error);
+    setStatus('⚠️ لا يوجد اتصال بالخادم، تحقق من الإنترنت');
+  });
+}
+async function persistPeople() {
+  allPeople = computeAllPeople();
+  await saveKey('khidmaAll', khidmaAll);
+  await saveKey('daamList', daamList);
+  await saveKey('maaList', maaList);
+  await saveKey('waragList', waragList);
+  await saveKey('khidmaByWeekday', khidmaByWeekday);
+}
+async function saveKey(key, value) {
+  try {
+    await db.ref(key).set(value);
+    return true;
+  } catch (e) {
+    setStatus('⚠️ لم يتم الحفظ، تحقق من الإنترنت وأعد المحاولة');
+    return false;
+  }
+}
+function setStatus(msg) { document.getElementById('syncStatus').textContent = msg; }
+
+/* دور "الدعم" فجدول الأسبوع: كنحسبوه بالمشي فوق نفس مصفوفة daamList بالتسلسل،
+   منطلقين من شخص اليوم الفعلي (بعد أي تبديل)، تمامًا بنفس منطق "ترتيب التناوب" المعروض تحت.
+   هكذا جدول الأسبوع وقائمة الترتيب كيبقاو دايمًا متوافقين، حتى لو صرا تبديل اليوم. */
+function getDaamPreview(i) {
+  const d = new Date(today); d.setDate(today.getDate() + i);
+  const key = dateKey(d);
+  if (overrides[key] && overrides[key].daam) return overrides[key].daam;
+  if (i === 0) return getDaamBase(d);
+  if (!daamList.length) return getDaamBase(d);
+  const prev = getDaamPreview(i - 1);
+  const idx = daamList.indexOf(prev);
+  if (idx < 0) return getDaamBase(d);
+  return daamList[(idx + 1) % daamList.length];
+}
+
+/* ===================== القيم الفعلية (بعد التبديل) ===================== */
+function getRoleFor(role, d) {
+  const key = dateKey(d);
+  if (overrides[key] && overrides[key][role]) return overrides[key][role];
+  if (role === 'khidma') return getKhidmaBase(d);
+  if (role === 'daam') return getDaamBase(d);
+  if (role === 'maa') return key === todayKey ? getMaaCurrent() : undefined;
+  if (role === 'warag') return key === todayKey ? getWaragCurrent() : undefined;
+}
+
+/* ===================== العرض ===================== */
+function safeRender(label, fn) {
+  try {
+    fn();
+  } catch (err) {
+    console.error(`خطأ أثناء عرض "${label}":`, err);
+  }
+}
+
+function renderAll() {
+  document.getElementById('todayDate').textContent = formatDate(today);
+
+  // سجل الماء والورگ أول شي يُعرض، حتى ما يتوقفوا أبدًا بسبب خطأ بقسم ثاني
+  safeRender('سجل الماء', renderMaaLog);
+  safeRender('سجل الورگ', renderWaragLog);
+
+  safeRender('بطاقات اليوم', () => {
+    const kOv = overrides[todayKey] && overrides[todayKey].khidma;
+    const dOv = overrides[todayKey] && overrides[todayKey].daam;
+    const mOv = overrides[todayKey] && overrides[todayKey].maa;
+    const wOv = overrides[todayKey] && overrides[todayKey].warag;
+
+    setCardSwap('khidma', kOv, getKhidmaBase(today));
+    setCardSwap('daam', dOv, getDaamBase(today));
+    setCardSwap('maa', mOv, getMaaCurrent());
+    setCardSwap('warag', wOv, getWaragCurrent());
+
+    document.getElementById('khidmaSub').textContent = 'حسب يوم الأسبوع';
+    document.getElementById('daamSub').textContent = 'بالتناوب اليومي';
+    const lastBuy = maaState.log[0];
+    document.getElementById('maaSub').textContent = lastBuy
+      ? `آخر شراء: ${lastBuy.person} (${lastBuy.date})`
+      : 'الدور الحالي — لم يسجل شراء بعد';
+    const lastWarag = waragState.log[0];
+    document.getElementById('waragSub').textContent = lastWarag
+      ? `آخر تسجيل: ${lastWarag.person} (${lastWarag.date})`
+      : 'الدور الحالي — لم يسجل بعد';
+  });
+
+  safeRender('جدول الأسبوع', () => {
+    const weekBody = document.getElementById('weekBody');
+    weekBody.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today); d.setDate(today.getDate() + i);
+      const tr = document.createElement('tr');
+      if (i === 0) tr.className = 'today';
+      tr.innerHTML = `<td>${esc(weekdayNames[d.getDay()])}</td><td>${esc(getRoleFor('khidma',d))}</td><td>${esc(getDaamPreview(i))}</td>`;
+      weekBody.appendChild(tr);
+    }
+  });
+
+  safeRender('قوائم التبديل', () => {
+    ['khidma','daam','maa','warag'].forEach(role => {
+      const sel = document.getElementById('select-' + role);
+      const list = role === 'khidma' ? khidmaAll : role === 'daam' ? daamList : role === 'maa' ? maaList : waragList;
+      sel.innerHTML = list.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+    });
+  });
+
+  // كل قسم معزول بمحاولة خاصة به، حتى لو صار خطأ بقسم واحد ما يوقف باقي الأقسام
+  safeRender('الغياب', renderAbsences);
+  safeRender('المصاريف', renderExpenses);
+  safeRender('ملخص الشهر', renderSummary);
+  safeRender('ترتيب التناوب', renderOrder);
+  safeRender('إدارة الأشخاص', renderPeopleManagement);
+
+  safeRender('قائمة أشخاص المصاريف', () => {
+    const expSel = document.getElementById('expensePerson');
+    expSel.innerHTML = allPeople.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  });
+
+  safeRender('اختيار الاسم', renderMyNameSelector);
+  safeRender('فحص دورك اليوم', () => checkMyTurn(false));
+}
+
+function renderOrder() {
+  const todayDaam = getRoleFor('daam', today);
+  const todayMaa = getMaaCurrent();
+  const todayWarag = getWaragCurrent();
+  document.getElementById('daamOrder').innerHTML = daamList.map(p =>
+    p === todayDaam ? `<b style="color:#1a7a4c">[${esc(p)} ⬅️ اليوم]</b>` : esc(p)
+  ).join(' ← ');
+  document.getElementById('maaOrder').innerHTML = maaList.map(p =>
+    p === todayMaa ? `<b style="color:#1a5c9c">[${esc(p)} ⬅️ الدور الآن]</b>` : esc(p)
+  ).join(' ← ');
+  document.getElementById('waragOrder').innerHTML = waragList.map(p =>
+    p === todayWarag ? `<b style="color:#6a1a9c">[${esc(p)} ⬅️ الدور الآن]</b>` : esc(p)
+  ).join(' ← ');
+}
+
+function setCardSwap(role, overridden, originalName) {
+  const nameEl = document.getElementById(role + 'Name');
+  const cardEl = nameEl.closest('.card');
+  // إذا كان "التبديل" لنفس الشخص الأصلي (بدون تغيير فعلي)، ما نعتبره تبديلاً حتى لا يظهر الاسم مكرراً بلا فائدة
+  if (overridden === originalName) overridden = null;
+  if (overridden) {
+    nameEl.innerHTML = `${esc(overridden)} <span class="orig-name">${esc(originalName)}</span>`;
+    cardEl.classList.add('swapped');
+    let badge = cardEl.querySelector('.swap-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'swap-badge';
+      nameEl.insertAdjacentElement('afterend', badge);
+    }
+    badge.textContent = '🔄 مبدّل اليوم';
+  } else {
+    nameEl.textContent = originalName || '—';
+    cardEl.classList.remove('swapped');
+    const badge = cardEl.querySelector('.swap-badge');
+    if (badge) badge.remove();
+  }
+}
+
+function togglePanel(role) {
+  document.getElementById('panel-' + role).classList.toggle('open');
+}
+
+async function doSwap(role) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول للتبديل"); return; }
+  const newPerson = document.getElementById('select-' + role).value;
+  const baseValue = role === 'khidma' ? getKhidmaBase(today)
+                   : role === 'daam' ? getDaamBase(today)
+                   : role === 'maa' ? getMaaCurrent()
+                   : getWaragCurrent();
+
+  if (!overrides[todayKey]) overrides[todayKey] = {};
+
+  if (newPerson === baseValue) {
+    // اختار نفس الشخص الحالي فعليًا — ما نخزّن تبديل وهمي، ونشيل أي تبديل سابق لهذا الدور اليوم
+    delete overrides[todayKey][role];
+    if (Object.keys(overrides[todayKey]).length === 0) delete overrides[todayKey];
+  } else {
+    overrides[todayKey][role] = newPerson;
+  }
+
+  const ok = await saveKey('overrides', overrides);
+  if (ok) {
+    document.getElementById('panel-' + role).classList.remove('open');
+    renderAll();
+    flashCopied(newPerson === baseValue ? '✅ لا يوجد تغيير — نفس الشخص الحالي' : '✅ تم التبديل');
+  }
+}
+
+/* ===================== دور الماء (بحسب الشراء ماشي بحسب الأيام) ===================== */
+async function buyMaa() {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول لتسجيل شراء الماء"); return; }
+  const person = getMaaCurrent();
+  maaState.log.unshift({ id: Date.now(), person, date: todayKey });
+  maaState.index = (maaState.index + 1) % maaList.length;
+  const ok = await saveKey('maaState', maaState);
+  if (ok) {
+    renderAll();
+    flashCopied(`✅ ${person} اشترى الماء، الدور الآن لـ ${getMaaCurrent()}`);
+  }
+}
+function renderMaaLog() {
+  const el = document.getElementById('maaLogList');
+  const recent = maaState.log.slice(0, 8);
+  if (!recent.length) { el.innerHTML = '<div class="empty">لا يوجد أي شراء مسجل بعد</div>'; return; }
+  el.innerHTML = recent.map(l => `
+    <div class="list-item">
+      <div>💧 ${esc(l.person)}</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="meta">${esc(l.date)}</div>
+        ${isAdmin ? `<button class="swap-btn" style="color:#c0392b; padding:3px 8px;" onclick="deleteMaaLogEntry(${l.id}, this)">🗑</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+function deleteMaaLogEntry(id, btn) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول للحذف"); return; }
+  confirmAction('delmaa-' + id, btn, () => doDeleteMaaLogEntry(id));
+}
+async function doDeleteMaaLogEntry(id) {
+  maaState.log = maaState.log.filter(l => l.id !== id);
+  const ok = await saveKey('maaState', maaState);
+  if (ok) { renderAll(); flashCopied('🗑️ تم حذف التسجيل'); }
+}
+
+/* ===================== دور الورگ (بحسب التسجيل ماشي بحسب الأيام) ===================== */
+async function buyWarag() {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول لتسجيل الورگ"); return; }
+  const person = getWaragCurrent();
+  waragState.log.unshift({ id: Date.now(), person, date: todayKey });
+  waragState.index = (waragState.index + 1) % waragList.length;
+  const ok = await saveKey('waragState', waragState);
+  if (ok) {
+    renderAll();
+    flashCopied(`✅ ${person} سوّى الورگ، الدور الآن لـ ${getWaragCurrent()}`);
+  }
+}
+function renderWaragLog() {
+  const el = document.getElementById('waragLogList');
+  const recent = waragState.log.slice(0, 8);
+  if (!recent.length) { el.innerHTML = '<div class="empty">لا يوجد أي تسجيل بعد</div>'; return; }
+  el.innerHTML = recent.map(l => `
+    <div class="list-item">
+      <div>📄 ${esc(l.person)}</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="meta">${esc(l.date)}</div>
+        ${isAdmin ? `<button class="swap-btn" style="color:#c0392b; padding:3px 8px;" onclick="deleteWaragLogEntry(${l.id}, this)">🗑</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+function deleteWaragLogEntry(id, btn) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول للحذف"); return; }
+  confirmAction('delwarag-' + id, btn, () => doDeleteWaragLogEntry(id));
+}
+async function doDeleteWaragLogEntry(id) {
+  waragState.log = waragState.log.filter(l => l.id !== id);
+  const ok = await saveKey('waragState', waragState);
+  if (ok) { renderAll(); flashCopied('🗑️ تم حذف التسجيل'); }
+}
+
+/* ===================== الغياب ===================== */
+async function addAbsence() {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول لتسجيل غياب"); return; }
+  const role = document.getElementById('absenceRole').value;
+  const note = document.getElementById('absenceNote').value.trim();
+  const person = getRoleFor(role, today);
+  const record = { id: Date.now(), date: todayKey, role, person, note };
+  absences.unshift(record);
+  const ok = await saveKey('absences', absences);
+  if (ok) {
+    document.getElementById('absenceNote').value = '';
+    renderAll();
+  }
+}
+function renderAbsences() {
+  const el = document.getElementById('absenceList');
+  const recent = absences.slice(0, 8);
+  if (!recent.length) { el.innerHTML = '<div class="empty">لا يوجد أي غياب مسجل</div>'; return; }
+  el.innerHTML = recent.map(a => `
+    <div class="list-item">
+      <div>⚠️ ${esc(a.person)} — ${esc(roleNames[a.role])}${a.note ? ' · ' + esc(a.note) : ''}</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="meta">${esc(a.date)}</div>
+        ${isAdmin ? `<button class="swap-btn" style="color:#c0392b; padding:3px 8px;" onclick="deleteAbsence(${a.id}, this)">🗑</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+function deleteAbsence(id, btn) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول للحذف"); return; }
+  confirmAction('delabsence-' + id, btn, () => doDeleteAbsence(id));
+}
+async function doDeleteAbsence(id) {
+  absences = absences.filter(a => a.id !== id);
+  const ok = await saveKey('absences', absences);
+  if (ok) { renderAll(); flashCopied('🗑️ تم حذف الغياب'); }
+}
+
+/* ===================== المصاريف ===================== */
+async function addExpense() {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول لتسجيل مصروف"); return; }
+  const person = document.getElementById('expensePerson').value;
+  const amount = parseFloat(document.getElementById('expenseAmount').value);
+  const note = document.getElementById('expenseNote').value.trim();
+  if (!amount || amount <= 0) { setStatus('⚠️ أدخل مبلغًا صحيحًا'); return; }
+  const record = { id: Date.now(), date: todayKey, person, amount, note };
+  expenses.unshift(record);
+  const ok = await saveKey('expenses', expenses);
+  if (ok) {
+    document.getElementById('expenseAmount').value = '';
+    document.getElementById('expenseNote').value = '';
+    renderAll();
+  }
+}
+function renderExpenses() {
+  const el = document.getElementById('expenseList');
+  const recent = expenses.slice(0, 8);
+  if (!recent.length) { el.innerHTML = '<div class="empty">لا يوجد أي مصروف مسجل</div>'; }
+  else {
+    el.innerHTML = recent.map(e => `
+      <div class="list-item">
+        <div>${esc(e.person)}${e.note ? ' · ' + esc(e.note) : ''}</div>
+        <div>${esc(e.amount)}${e.date === todayKey ? '' : ' <span class="meta">(' + esc(e.date) + ')</span>'}</div>
+      </div>
+    `).join('');
+  }
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  document.getElementById('expenseTotal').textContent = `المجموع الكلي: ${total}`;
+}
+
+/* ===================== ملخص الشهر ===================== */
+function renderSummary() {
+  const counts = {};
+  allPeople.forEach(p => counts[p] = { khidma: 0, daam: 0, maa: 0, warag: 0 });
+
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  for (let d = new Date(firstOfMonth); d <= today; d.setDate(d.getDate() + 1)) {
+    ['khidma','daam'].forEach(role => {
+      const p = getRoleFor(role, d);
+      if (counts[p]) counts[p][role]++;
+    });
+  }
+  // الماء والورگ كيتحسبوا من سجل الاستخدام الفعلي (ماشيين بحساب الاستخدام ماشي بحساب الأيام)
+  const monthKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  maaState.log.forEach(entry => {
+    if (entry.date.startsWith(monthKey) && counts[entry.person]) counts[entry.person].maa++;
+  });
+  waragState.log.forEach(entry => {
+    if (entry.date.startsWith(monthKey) && counts[entry.person]) counts[entry.person].warag++;
+  });
+
+  const rows = allPeople
+    .filter(p => counts[p].khidma + counts[p].daam + counts[p].maa + counts[p].warag > 0)
+    .sort((a,b) => (counts[b].khidma+counts[b].daam+counts[b].maa+counts[b].warag) - (counts[a].khidma+counts[a].daam+counts[a].maa+counts[a].warag));
+
+  const el = document.getElementById('monthSummary');
+  el.innerHTML = `
+    <table>
+      <tr><th>الاسم</th><th>خدمة</th><th>دعم</th><th>ماء</th><th>ورگ</th></tr>
+      ${rows.map(p => `<tr><td>${esc(p)}</td><td>${counts[p].khidma}</td><td>${counts[p].daam}</td><td>${counts[p].maa}</td><td>${counts[p].warag}</td></tr>`).join('')}
+    </table>
+  `;
+}
+
+/* ===================== نسخ الرسالة ===================== */
+function copyMessage() {
+  const msg = `📋 برنامج اليوم (${formatDate(today)})\n🧹 الخدمة: ${getRoleFor('khidma',today)}\n💰 الدعم: ${getRoleFor('daam',today)}\n💧 الماء: ${getRoleFor('maa',today)}\n📄 الورگ: ${getRoleFor('warag',today)}`;
+  navigator.clipboard.writeText(msg).then(() => {
+    flashCopied('✅ تم النسخ، الآن الصقها في المجموعة');
+  }).catch(() => {
+    document.getElementById('copiedMsg').textContent = msg;
+  });
+}
+/* ===================== تأكيد الحذف (بدون نافذة confirm، خدامة فكل متصفح) ===================== */
+let pendingConfirms = {};
+function confirmAction(key, btn, action) {
+  if (pendingConfirms[key]) {
+    clearTimeout(pendingConfirms[key]);
+    delete pendingConfirms[key];
+    btn.textContent = btn.dataset.orig || btn.textContent;
+    btn.style.background = '';
+    btn.style.color = '';
+    action();
+  } else {
+    if (!btn.dataset.orig) btn.dataset.orig = btn.textContent;
+    btn.textContent = '✅ تأكيد؟';
+    btn.style.background = '#c0392b';
+    btn.style.color = '#fff';
+    pendingConfirms[key] = setTimeout(() => {
+      btn.textContent = btn.dataset.orig;
+      btn.style.background = '';
+      btn.style.color = '';
+      delete pendingConfirms[key];
+    }, 4000);
+  }
+}
+function flashCopied(text) {
+  document.getElementById('copiedMsg').textContent = text;
+  setTimeout(() => document.getElementById('copiedMsg').textContent = '', 3000);
+}
+
+/* ===================== إدارة الأشخاص (إضافة/حذف/تعديل) ===================== */
+function renderPeopleManagement() {
+  renderKhidmaWeekdayManage();
+  renderPersonList('khidmaPoolManage', 'khidma', khidmaAll);
+  renderPersonList('daamManage', 'daam', daamList);
+  renderPersonList('maaManage', 'maa', maaList);
+  renderPersonList('waragManage', 'warag', waragList);
+  renderDaamRecalSelect();
+}
+
+/* الترتيب الأساسي لخانة الدعم (getDaamBase) كيتصاب بعض المرات بانزياح غلط
+   (مثلاً بعد حذف/إضافة شخص فيوم غير اليوم الحالي)، فيصير الأساس المحسوب
+   غلط بشكل ثابت، وأي تبديل يومي كيبقى مجرد ترقيع مؤقت. هاد الأداة كتخلي
+   المسؤول يحدد الشخص الصحيح لليوم مرة وحدة، وتصحح الإزاحة (daamOffset)
+   بشكل دائم لكل الأيام الجاية. */
+function renderDaamRecalSelect() {
+  const sel = document.getElementById('daamRecalSelect');
+  if (!sel) return;
+  const currentBase = daamList.length ? getDaamBase(today) : null;
+  sel.innerHTML = daamList.map(p =>
+    `<option value="${esc(p)}" ${p === currentBase ? 'selected' : ''}>${esc(p)}</option>`
+  ).join('');
+}
+
+async function recalibrateDaam() {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول"); return; }
+  const sel = document.getElementById('daamRecalSelect');
+  const correctPerson = sel && sel.value;
+  if (!correctPerson || !daamList.length) return;
+  const idx = daamList.indexOf(correctPerson);
+  if (idx < 0) return;
+
+  const rawToday = dayDiff(today, startDate);
+  daamOffset = (((idx - rawToday) % daamList.length) + daamList.length) % daamList.length;
+
+  const ok = await saveKey('daamOffset', daamOffset);
+  if (!ok) return;
+
+  // إذا كان مسجل تبديل لليوم لنفس الشخص، نشيلوه لأنه صار غير ضروري
+  // (الترتيب الأساسي صار صحيح مباشرة بلا حاجة لتبديل)
+  if (overrides[todayKey] && overrides[todayKey].daam === correctPerson) {
+    delete overrides[todayKey].daam;
+    if (Object.keys(overrides[todayKey]).length === 0) delete overrides[todayKey];
+    await saveKey('overrides', overrides);
+  }
+
+  renderAll();
+  flashCopied(`✅ تم تصحيح ترتيب الدعم — ${correctPerson} صار الأساس الصحيح لليوم`);
+}
+
+function renderKhidmaWeekdayManage() {
+  const el = document.getElementById('khidmaWeekdayManage');
+  if (!khidmaAll.length) { el.innerHTML = '<div class="empty">أضف شخصًا أولًا</div>'; return; }
+  el.innerHTML = weekdayNames.map((name, idx) => `
+    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+      <span style="font-size:12px; width:70px; flex-shrink:0;">${esc(name)}</span>
+      <select onchange="assignKhidmaWeekday(${idx}, this.value)" style="margin-top:0;">
+        ${khidmaAll.map(p => `<option value="${esc(p)}" ${khidmaByWeekday[idx] === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+}
+
+function renderPersonList(containerId, role, list) {
+  const el = document.getElementById(containerId);
+  if (!list.length) { el.innerHTML = '<div class="empty">لا يوجد أي اسم، أضف واحدًا</div>'; return; }
+  // نبني كود onchange/onclick كنص خام ثم "نعقّمه" بالكامل لعرضه داخل attribute HTML؛
+  // هذا يمنع أي اسم يحتوي على علامة اقتباس ' أو " أو <> من كسر الـ HTML وتنفيذ كود دخيل (XSS)
+  el.innerHTML = list.map(p => {
+    const renameJs = esc(`renamePerson(${JSON.stringify(role)}, ${JSON.stringify(p)}, this.value)`);
+    const deleteJs = esc(`deletePerson(${JSON.stringify(role)}, ${JSON.stringify(p)}, this)`);
+    return `
+    <div class="list-item">
+      <input type="text" value="${esc(p)}" style="margin-top:0; flex:1;"
+        onchange="${renameJs}">
+      <button class="swap-btn" style="margin-inline-start:6px; color:#c0392b;"
+        onclick="${deleteJs}">🗑</button>
+    </div>
+  `;
+  }).join('');
+}
+
+async function addPerson(role) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول"); return; }
+  const inputId = role === 'khidma' ? 'newKhidmaName' : role === 'daam' ? 'newDaamName' : role === 'maa' ? 'newMaaName' : 'newWaragName';
+  const input = document.getElementById(inputId);
+  const name = input.value.trim();
+  if (!name) return;
+  const list = role === 'khidma' ? khidmaAll : role === 'daam' ? daamList : role === 'maa' ? maaList : waragList;
+  if (list.includes(name)) { alert('هذا الاسم موجود بالفعل في هذه القائمة'); return; }
+
+  if (role === 'daam') {
+    const personTodayOld = getDaamBase(today);
+    list.push(name);
+    const newIdxToday = daamList.indexOf(personTodayOld);
+    const rawToday = dayDiff(today, startDate);
+    daamOffset = (((newIdxToday - rawToday) % daamList.length) + daamList.length) % daamList.length;
+    await saveKey('daamOffset', daamOffset);
+  } else {
+    list.push(name);
+  }
+
+  input.value = '';
+  await persistPeople();
+  renderAll();
+  flashCopied(`✅ تمت إضافة ${name}`);
+}
+
+function deletePerson(role, name, btn) {
+  if (!isAdmin) { alert("يجب عليك الدخول كمسؤول"); return; }
+  confirmAction('delperson-' + role + '-' + name, btn, () => doDeletePerson(role, name));
+}
+async function doDeletePerson(role, name) {
+  if (role === 'khidma') {
+    khidmaAll = khidmaAll.filter(p => p !== name);
+    Object.keys(khidmaByWeekday).forEach(day => {
+      if (khidmaByWeekday[day] === name) khidmaByWeekday[day] = khidmaAll[0] || '';
+    });
+  } else if (role === 'daam') {
+    const personTodayOld = getDaamBase(today);
+    daamList = daamList.filter(p => p !== name);
+    if (daamList.length) {
+      if (personTodayOld !== name) {
+        const newIdxToday = daamList.indexOf(personTodayOld);
+        const rawToday = dayDiff(today, startDate);
+        daamOffset = (((newIdxToday - rawToday) % daamList.length) + daamList.length) % daamList.length;
+      } else {
+        daamOffset = ((daamOffset % daamList.length) + daamList.length) % daamList.length;
+      }
+    } else {
+      daamOffset = 0;
+    }
+    await saveKey('daamOffset', daamOffset);
+  } else if (role === 'maa') {
+    const currentPerson = getMaaCurrent();
+    maaList = maaList.filter(p => p !== name);
+    if (maaList.length) {
+      const newIdx = maaList.indexOf(currentPerson);
+      maaState.index = newIdx >= 0 ? newIdx : (maaState.index % maaList.length);
+    } else {
+      maaState.index = 0;
+    }
+    await saveKey('maaState', maaState);
+  } else if (role === 'warag') {
+    const currentPerson = getWaragCurrent();
+    waragList = waragList.filter(p => p !== name);
+    if (waragList.length) {
+      const newIdx = waragList.indexOf(currentPerson);
+      waragState.index = newIdx >= 0 ? newIdx : (waragState.index % waragList.length);
+    } else {
+      waragState.index = 0;
+    }
+    await saveKey('waragState', waragState);
+  }
+  await persistPeople();
+  renderAll();
+  flashCopied(`🗑️ تم حذف ${name}، وخرج نهائيًا من برنامج ${roleNames[role]}`);
+}
+
+async function renamePerson(role, oldName, newName) {
+  if (!isAdmin) { renderAll(); return; }
+  newName = newName.trim();
+  if (!newName || newName === oldName) { renderAll(); return; }
+  const targetList = role === 'khidma' ? khidmaAll : role === 'daam' ? daamList : role === 'maa' ? maaList : waragList;
+  if (targetList.includes(newName)) { alert('هذا الاسم موجود بالفعل في هذه القائمة'); renderAll(); return; }
+
+  if (role === 'khidma') {
+    khidmaAll = khidmaAll.map(p => p === oldName ? newName : p);
+    Object.keys(khidmaByWeekday).forEach(day => {
+      if (khidmaByWeekday[day] === oldName) khidmaByWeekday[day] = newName;
+    });
+  } else if (role === 'daam') {
+    daamList = daamList.map(p => p === oldName ? newName : p);
+  } else if (role === 'maa') {
+    maaList = maaList.map(p => p === oldName ? newName : p);
+  } else if (role === 'warag') {
+    waragList = waragList.map(p => p === oldName ? newName : p);
+  }
+
+  // تحديث الاسم فالسجل التاريخي (التبديلات، الغياب، المصاريف، شراء الماء، الورگ) باش يبقى متوافق
+  Object.values(overrides).forEach(day => {
+    Object.keys(day).forEach(r => { if (day[r] === oldName) day[r] = newName; });
+  });
+  absences.forEach(a => { if (a.person === oldName) a.person = newName; });
+  expenses.forEach(e => { if (e.person === oldName) e.person = newName; });
+  maaState.log.forEach(l => { if (l.person === oldName) l.person = newName; });
+  waragState.log.forEach(l => { if (l.person === oldName) l.person = newName; });
+
+  await persistPeople();
+  await saveKey('overrides', overrides);
+  await saveKey('absences', absences);
+  await saveKey('expenses', expenses);
+  await saveKey('maaState', maaState);
+  await saveKey('waragState', waragState);
+  renderAll();
+  flashCopied(`✏️ تم تغيير الاسم إلى ${newName}`);
+}
+
+async function assignKhidmaWeekday(dayIdx, name) {
+  if (!isAdmin) { renderAll(); return; }
+  khidmaByWeekday[dayIdx] = name;
+  await persistPeople();
+  renderAll();
+}
+
+/* ===================== التنبيه الصوتي عند دور الخدمة/الدعم/الماء ===================== */
+let myName = localStorage.getItem('myName') || '';
+
+/* كشف متصفح واتساب/فيسبوك الداخلي (In-App Browser): هذا النوع من المتصفحات
+   لا يدعم واجهة الإشعارات إطلاقًا على آيفون، وأحيانًا يمسح التخزين المحلي
+   (localStorage) بين كل فتح للرابط، ولهذا الاسم كان "ينسى" نفسه والتنبيهات ما توصل. */
+function isInAppBrowser() {
+  const ua = navigator.userAgent || '';
+  const looksLikeInApp = /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|Twitter|TikTok|WhatsApp/i.test(ua);
+  const noNotificationSupport = !('Notification' in window);
+  // على آيفون: Safari الحقيقي يدعم Notification API دائمًا (حتى لو الإذن لسه ما انطلب)،
+  // فغيابها في آيفون علامة قوية إنه متصفح داخلي (واتساب/انستقرام) مو Safari.
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  return looksLikeInApp || (isIOS && noNotificationSupport);
+}
+
+function copyPageLink() {
+  const link = window.location.href;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(
+      () => flashCopied('✅ تم نسخ الرابط! افتح Safari والصقه'),
+      () => prompt('انسخ هذا الرابط وافتحه في Safari:', link)
+    );
+  } else {
+    prompt('انسخ هذا الرابط وافتحه في Safari:', link);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (isInAppBrowser()) {
+    const w = document.getElementById('inAppWarning');
+    if (w) w.style.display = 'block';
+  }
+});
+
+/* تسجيل الـ Service Worker: يخلي الإشعارات تطلع بشكل أقوى وأثبت (متل إشعارات أي تطبيق حقيقي)
+   طالما التطبيق مثبّت بالشاشة الرئيسية ومفتوح أو شغال بالخلفية. */
+let swReady = null;
+if ('serviceWorker' in navigator) {
+  swReady = navigator.serviceWorker.register('sw.js').then(reg => reg).catch(() => null);
+}
+
+function showStrongNotification(title, body, tag) {
+  if (swReady) {
+    swReady.then(reg => {
+      if (reg && reg.active) {
+        reg.active.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag });
+        return;
+      }
+      showPlainNotification(title, body);
+    }).catch(() => showPlainNotification(title, body));
+  } else {
+    showPlainNotification(title, body);
+  }
+}
+
+function showPlainNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification(title, { body, requireInteraction: true, icon: 'icon-192.png' });
+    n.onclick = () => { window.focus(); n.close(); };
+  }
+}
+
+
+let soundEnabled = localStorage.getItem('soundEnabled') === '1';
+let alreadyAlertedToday = sessionStorage.getItem('alertedFor') === todayKey;
+
+function renderMyNameSelector() {
+  const sel = document.getElementById('myNameSelect');
+  const options = ['<option value="">— اختر اسمك —</option>']
+    .concat(allPeople.map(p => `<option value="${esc(p)}" ${p === myName ? 'selected' : ''}>${esc(p)}</option>`));
+  sel.innerHTML = options.join('');
+  sel.onchange = () => {
+    myName = sel.value;
+    localStorage.setItem('myName', myName);
+    checkMyTurn(true);
+    if (soundEnabled) registerPushToken(); // يحدّث الاسم المرتبط بتوكن هذا الهاتف
+  };
+  updateAlertStatusText();
+}
+
+function updateAlertStatusText() {
+  const st = document.getElementById('myAlertStatus');
+  st.textContent = soundEnabled ? '✅ الصوت مفعّل في هذا الهاتف' : '⚠️ يجب الضغط على الزر لتفعيل الصوت';
+}
+
+function enableMyAlert() {
+  soundEnabled = true;
+  localStorage.setItem('soundEnabled', '1');
+  updateAlertStatusText();
+  unlockAudio();
+  playBeep('default'); // نغمة تجريبية للتأكد من أنها تعمل
+  registerPushToken(); // يطلب إذن الإشعارات ويسجل توكن هذا الهاتف (Push حقيقي حتى والتطبيق مقفول)
+  checkMyTurn(false);
+}
+
+/* الصوت في المتصفح لا يعمل تلقائيًا إلا بعد أي لمسة من المستخدم في كل جلسة.
+   لذلك نفتح (unlock) سياق الصوت مع أول لمسة في أي مكان بالصفحة،
+   حتى لا يُضطر المستخدم للضغط على زر التفعيل في كل مرة. */
+let sharedAudioCtx = null;
+function getAudioCtx() {
+  if (!sharedAudioCtx) {
+    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return sharedAudioCtx;
+}
+function unlockAudio() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+  } catch (e) { /* الصوت لا يعمل في هذا المتصفح */ }
+}
+document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true });
+
+/* نغمة مميزة لكل دور حتى تعرف من الصوت وحده أي دور عليك، بدون فتح الشاشة.
+   الخدمة: نغمة حادة متكررة (مستعجلة) — الدعم: نغمتان هادئتان متتاليتان — الماء: نغمة متموجة. */
+const ROLE_TONES = {
+  khidma: { freq: 1046, wave: 'square', count: 5, gap: 0.2,  gain: 0.7 },
+  daam:   { freq: 660,  wave: 'sine',   count: 3, gap: 0.45, gain: 0.65 },
+  maa:    { freq: 523,  wave: 'triangle', count: 4, gap: 0.28, gain: 0.65, alt: 784 },
+  warag:  { freq: 392,  wave: 'sawtooth', count: 4, gap: 0.32, gain: 0.65, alt: 494 },
+  default:{ freq: 880,  wave: 'sine',   count: 4, gap: 0.4,  gain: 0.65 }
+};
+
+function playTone(ctx, delay, freq, wave, gain) {
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.connect(g); g.connect(ctx.destination);
+  osc.type = wave; osc.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
+  g.gain.exponentialRampToValueAtTime(gain, ctx.currentTime + delay + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 0.32);
+  osc.start(ctx.currentTime + delay);
+  osc.stop(ctx.currentTime + delay + 0.35);
+}
+
+function playBeep(roleKey) {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const t = ROLE_TONES[roleKey] || ROLE_TONES.default;
+    for (let i = 0; i < t.count; i++) {
+      const freq = t.alt && i % 2 === 1 ? t.alt : t.freq;
+      playTone(ctx, i * t.gap, freq, t.wave, t.gain);
+    }
+  } catch (e) { /* الصوت لا يعمل في هذا المتصفح */ }
+}
+
+/* عند وجود أكثر من دور في نفس اليوم، نشغّل نغمة كل دور واحدة تلو الأخرى */
+function playBeepForRoles(roleKeys) {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    let offset = 0;
+    roleKeys.forEach(k => {
+      const t = ROLE_TONES[k] || ROLE_TONES.default;
+      for (let i = 0; i < t.count; i++) {
+        const freq = t.alt && i % 2 === 1 ? t.alt : t.freq;
+        playTone(ctx, offset + i * t.gap, freq, t.wave, t.gain);
+      }
+      offset += t.count * t.gap + 0.35;
+    });
+  } catch (e) { /* الصوت لا يعمل في هذا المتصفح */ }
+}
+
+const ROLE_LABELS = { khidma: '🧹 الخدمة', daam: '💰 الدعم', maa: '💧 الماء', warag: '📄 الورگ' };
+let bannerDismissed = false;
+
+function myRolesToday() {
+  const keys = [];
+  if (getRoleFor('khidma', today) === myName) keys.push('khidma');
+  if (getRoleFor('daam', today) === myName) keys.push('daam');
+  if (getMaaCurrent() === myName) keys.push('maa');
+  if (getWaragCurrent() === myName) keys.push('warag');
+  return keys;
+}
+
+function checkMyTurn(playSoundIfMatch) {
+  const banner = document.getElementById('myTurnBanner');
+  if (!myName) { banner.style.display = 'none'; banner.classList.remove('pulsing'); return; }
+
+  const roleKeys = myRolesToday();
+
+  if (roleKeys.length && !bannerDismissed) {
+    banner.style.display = 'block';
+    banner.classList.add('pulsing');
+    document.getElementById('myTurnTitle').textContent =
+      `🔔 اليوم عليك: ${roleKeys.map(k => ROLE_LABELS[k]).join(' و ')}`;
+  } else {
+    banner.style.display = 'none';
+    banner.classList.remove('pulsing');
+  }
+
+  if (roleKeys.length && playSoundIfMatch && !alreadyAlertedToday) {
+    alreadyAlertedToday = true;
+    sessionStorage.setItem('alertedFor', todayKey);
+    fireAlert(roleKeys);
+  }
+}
+
+function dismissTurnBanner() {
+  bannerDismissed = true;
+  const banner = document.getElementById('myTurnBanner');
+  banner.style.display = 'none';
+  banner.classList.remove('pulsing');
+}
+
+/* تنبيه فعلي: صوت مميز لكل دور + اهتزاز مميز + إشعار نظام + وميض عنوان التبويب */
+function fireAlert(roleKeys) {
+  if (soundEnabled) playBeepForRoles(roleKeys);
+  if (navigator.vibrate) {
+    // اهتزاز أقوى وأطول عندما يكون هناك أكثر من دور
+    const pattern = roleKeys.length > 1
+      ? [300, 120, 300, 120, 300, 120, 300]
+      : [300, 150, 300, 150, 300];
+    try { navigator.vibrate(pattern); } catch (e) {}
+  }
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') {
+      showStrongNotification(
+        `🔔 ${myName}، اليوم عليك دور!`,
+        roleKeys.map(k => ROLE_LABELS[k]).join(' و ') + ' — برنامج البيت اليومي',
+        'daily-house-turn'
+      );
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+  startTitleBlink(roleKeys);
+}
+
+/* وميض عنوان التبويب (التاب) طالما دورك لم يُقفل، حتى تنتبه له حتى وأنت في تبويب آخر */
+const ORIGINAL_TITLE = document.title;
+let titleBlinkInterval = null;
+function startTitleBlink(roleKeys) {
+  if (titleBlinkInterval || document.hasFocus()) return;
+  let on = false;
+  titleBlinkInterval = setInterval(() => {
+    if (document.hasFocus() || bannerDismissed) { stopTitleBlink(); return; }
+    on = !on;
+    document.title = on ? `🔔 عليك ${roleKeys.map(k => ROLE_LABELS[k].split(' ')[1]).join('/')}!` : ORIGINAL_TITLE;
+  }, 1200);
+}
+function stopTitleBlink() {
+  if (titleBlinkInterval) { clearInterval(titleBlinkInterval); titleBlinkInterval = null; }
+  document.title = ORIGINAL_TITLE;
+}
+window.addEventListener('focus', stopTitleBlink);
+
+/* ===================== تنبيهات مجدولة الساعة 8 و10 مساءً (الخدمة والدعم فقط) =====================
+   بخلاف تنبيه "دوري" (myTurn) اللي خاص فقط بالشخص المعني، هذا تنبيه جماعي:
+   يوصل لأي شخص عنده التطبيق مفتوح فهاذ التوقيت، يذكّره شكون على الخدمة وشكون على الدعم اليوم.
+   الماء والورگ ما داخلين هنا لأنهم ماشيين بالاستخدام لا باليوم، فما عندهمش معنى "تذكير يومي بوقت محدد". */
+const SCHEDULED_CHECKPOINTS = [
+  { id: 'chk20', hour: 20, minute: 0, label: '🔔 تذكير الساعة 8 مساءً' },
+  { id: 'chk22', hour: 22, minute: 0, label: '🔔 تذكير الساعة 10 مساءً' }
+];
+
+function checkpointStorageKey(cp) {
+  return `scheduledAlert_${cp.id}_${todayKey}`;
+}
+
+/* نتأكد كل نصف دقيقة، وأيضًا فور فتح الصفحة، هل حان وقت أي نقطة ولم تُطلق بعد اليوم.
+   هكذا حتى لو الصفحة تحلت بعد الساعة 8 أو 10 مباشرة (وما كانتش مفتوحة باش يطلق التنبيه فوقته بالضبط)،
+   يطلق التنبيه فور فتحها ("تعويض" التنبيه الفائت لنفس اليوم) بدل ما يضيع. */
+function checkScheduledAlerts() {
+  const now = new Date();
+  SCHEDULED_CHECKPOINTS.forEach(cp => {
+    const checkpointTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), cp.hour, cp.minute, 0, 0);
+    if (now < checkpointTime) return; // لم يحن الوقت بعد
+    const storageKey = checkpointStorageKey(cp);
+    if (localStorage.getItem(storageKey) === '1') return; // سبق أن أُطلق اليوم فهذا الهاتف
+    localStorage.setItem(storageKey, '1');
+    fireScheduledAlert(cp);
+  });
+}
+
+function fireScheduledAlert(cp) {
+  const kName = getRoleFor('khidma', today) || '—';
+  const dName = getRoleFor('daam', today) || '—';
+  const body = `🧹 الخدمة: ${kName}   •   💰 الدعم: ${dName}`;
+
+  // إذا الشخص لي فاتح التطبيق دابا هو نفسو صاحب الدور (خدمة أو دعم أو الاثنين)،
+  // العنوان يبان بإسمو مباشرة بدل عنوان عام، حتى ينتبه بسرعة أكثر أنه هو المعني.
+  const myRolesNow = [];
+  if (myName && kName === myName) myRolesNow.push('khidma');
+  if (myName && dName === myName) myRolesNow.push('daam');
+
+  const title = myRolesNow.length
+    ? `🔔 ${myName}، اليوم عليك: ${myRolesNow.map(k => ROLE_LABELS[k]).join(' و ')}`
+    : cp.label;
+
+  if (soundEnabled) playBeepForRoles(myRolesNow.length ? myRolesNow : ['khidma', 'daam']);
+
+  if (navigator.vibrate) {
+    const pattern = myRolesNow.length > 1
+      ? [300, 120, 300, 120, 300, 120, 300]
+      : [300, 150, 300, 150, 300];
+    try { navigator.vibrate(pattern); } catch (e) {}
+  }
+
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') {
+      showStrongNotification(title, body, 'daily-checkpoint-' + cp.id);
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  startTitleBlink(myRolesNow.length ? myRolesNow : ['khidma', 'daam']);
+}
+
+/* تحقق فوري عند تحميل الصفحة، ثم كل 30 ثانية طالما الصفحة مفتوحة */
+checkScheduledAlerts();
+setInterval(checkScheduledAlerts, 30 * 1000);
+
+/* إعادة تنبيه دوري (كل 7 دقائق بدل 20) طالما الصفحة مفتوحة ولم يُغلق البانر، حتى لا يفوتك الدور */
+let reminderInterval = null;
+function scheduleReminders() {
+  if (reminderInterval) return;
+  reminderInterval = setInterval(() => {
+    const banner = document.getElementById('myTurnBanner');
+    if (banner && banner.style.display !== 'none' && soundEnabled && !bannerDismissed) {
+      const roleKeys = myRolesToday();
+      if (roleKeys.length) fireAlert(roleKeys);
+    }
+  }, 7 * 60 * 1000);
+}
+
+/* تحديث "اليوم" تلقائيًا عند مرور منتصف الليل والصفحة لا تزال مفتوحة */
+function refreshTodayIfNeeded() {
+  const effectiveNow = getEffectiveDate();
+  const nowKey = dateKey(effectiveNow);
+  if (nowKey !== todayKey) {
+    today = effectiveNow;
+    todayKey = nowKey;
+    alreadyAlertedToday = false;
+    bannerDismissed = false;
+    sessionStorage.removeItem('alertedFor');
+    renderAll();
+    checkMyTurn(true);
+  }
+}
+setInterval(refreshTodayIfNeeded, 60 * 1000);
+
+authReady.then(() => loadAll());
+updateAdminUI();
+renderMyNameSelector();
+checkMyTurn(true);
+scheduleReminders();
+</script>
+</body>
+</html>
