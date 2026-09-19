@@ -1,0 +1,17 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "stores": {
+      "$storeId": {
+        ".read": "auth != null && auth.token.storeId === $storeId",
+        ".write": "auth != null && auth.token.storeId === $storeId",
+
+        "fcmTokens": {
+          ".indexOn": ["name"]
+        }
+      }
+    }
+  }
+}
