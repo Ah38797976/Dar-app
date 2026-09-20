@@ -1,0 +1,23 @@
+{
+  "name": "tajirapp",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase-tools": "^13.0.0"
+  },
+  "scripts": {
+    "test:inventory": "node tests/inventory-logic.test.js",
+    "test:rules": "firebase emulators:exec --only database \"node tests/security-rules.test.js\"",
+    "create-store": "node scripts/create-store.js",
+    "create-admin": "node scripts/create-admin.js",
+    "test:admin-logic": "node tests/system-admin-logic.test.js",
+    "test:security-fixes": "node tests/security-fixes.test.js",
+    "test:admin-api": "node tests/system-admin-api.test.js",
+    "test:admin-ui": "node tests/system-admin-ui.test.js",
+    "test": "npm run test:inventory && npm run test:admin-logic && npm run test:security-fixes && npm run test:admin-api && npm run test:admin-ui"
+  }
+}
