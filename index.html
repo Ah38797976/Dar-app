@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TajirApp — تطبيق التاجر</title>
+
+<!-- إعدادات التطبيق المثبّت على الشاشة الرئيسية (PWA) -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e3b2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TajirApp">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  :root {
+    --ink: #12251e; --brand: #0e3b2e; --brand-2: #1a5c42; --canvas: #eef2ef; --line: #dde5e0;
+    --muted: #5b6e66; --tint: #e4efe8; --amber: #f2b33d; --amber-ink: #4a3000;
+    --warn-bg: #fff3dc; --warn-ink: #7a4a00;
+  }
+  body {
+    font-family: 'Segoe UI', Tahoma, system-ui, Arial, sans-serif;
+    background: var(--canvas);
+    min-height: 100vh;
+    padding: 0 16px calc(108px + env(safe-area-inset-bottom, 0px));
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  .ico { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+  /* ===== الرأس ===== */
+  .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(18px + env(safe-area-inset-top, 0px)) 0 14px; }
+  .header h1 { font-size: 21px; line-height: 1.3; font-weight: 700; word-break: break-word; }
+  .header .date { font-size: 13px; color: var(--muted); }
+  .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .icon-btn {
+    min-width: 44px; height: 44px; padding: 0 12px; border-radius: 12px; background: #fff; border: 1px solid var(--line);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: var(--brand);
+    font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .icon-btn .adm-open, .icon-btn .adm-txt { display: none; }
+  .icon-btn.on { background: var(--brand-2); border-color: var(--brand-2); color: #fff; }
+  .icon-btn.on .adm-closed { display: none; }
+  .icon-btn.on .adm-open, .icon-btn.on .adm-txt { display: inline-block; }
+  .icon-btn:focus-visible, .nav button:focus-visible, .st-row:focus-visible { outline: 3px solid #1b6fd1; outline-offset: 2px; }
+
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    border: 1px solid var(--line);
+  }
+  select, input[type=text], input[type=number] {
+    width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ddd;
+    font-size: 14px; margin-top: 6px; font-family: inherit;
+  }
+  .btn {
+    display: block; width: 100%; background: var(--brand-2); color: #fff; border: none;
+    border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 700;
+    margin-top: 8px; cursor: pointer;
+  }
+  .btn.secondary { background: #444; }
+  .btn.small { padding: 9px; font-size: 13px; }
+  .btn:active { opacity: 0.85; }
+  .btn:disabled { opacity: 0.5; }
+  .section {
+    background: #fff; border-radius: 18px; padding: 16px 20px; margin-top: 14px; border: 1px solid var(--line);
+  }
+  .section h2 { font-size: 15px; color: #333; margin-bottom: 10px; }
+  .copied { text-align: center; color: #8a3a34; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  .status { text-align: center; font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 14px; }
+  .list-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;
+  }
+  .list-item:last-child { border-bottom: none; }
+  .list-item .meta { color: #999; font-size: 11px; }
+  .empty { color: #aaa; font-size: 13px; text-align: center; padding: 10px 0; }
+  .hidden { display: none; }
+  .admin-only { display: none; }
+
+  /* ===================== لوحة تحكم المتجر (واجهة فقط) ===================== */
+  #storeDashboard [hidden] { display: none !important; }
+  .offline { display: flex; gap: 10px; align-items: flex-start; background: var(--warn-bg); color: var(--warn-ink); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; font-size: 13.5px; }
+  .offline .ico { margin-top: 2px; }
+  .offline b { display: block; }
+  .offline button { margin-inline-start: auto; align-self: center; min-height: 36px; padding: 0 12px; border-radius: 10px; background: #fff; border: 0; font-family: inherit; font-weight: 700; font-size: 13px; color: var(--warn-ink); flex-shrink: 0; cursor: pointer; }
+
+  .hero { background: var(--brand); color: #fff; border-radius: 24px; padding: 18px 18px 0; overflow: hidden; }
+  .hero-label { font-size: 14px; opacity: 0.85; }
+  .hero-value { font-size: 46px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; margin: 2px 0 12px; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 30px; }
+  .bars i { flex: 1; height: 4px; border-radius: 4px 4px 0 0; background: rgba(255,255,255,0.28); }
+  .bars i:last-child { background: var(--amber); }
+  .hero-cap { font-size: 12px; opacity: 0.75; margin: 8px 0 14px; line-height: 1.6; }
+  .strip { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid rgba(255,255,255,0.16); margin: 0 -18px; }
+  .strip > * { padding: 12px 14px; text-align: start; background: none; border: 0; color: inherit; font-family: inherit; }
+  .strip > *:first-child { padding-inline-start: 18px; }
+  .strip > * + * { border-inline-start: 1px solid rgba(255,255,255,0.16); }
+  .strip small { display: block; font-size: 12px; opacity: 0.75; white-space: nowrap; }
+  .strip strong { display: block; font-size: 20px; font-weight: 700; }
+  .strip button { cursor: pointer; }
+  .strip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); margin-inline-end: 6px; vertical-align: middle; }
+
+  .push-banner { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin-top: 12px; }
+  .push-banner .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--tint); color: var(--brand); display: grid; place-items: center; flex-shrink: 0; }
+  .push-banner p { flex: 1; font-size: 13.5px; line-height: 1.5; }
+  .push-banner .go { min-height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--brand); color: #fff; font-family: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+  .push-banner .x { width: 32px; height: 32px; border: 0; background: none; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+  .push-banner .x .ico { width: 18px; height: 18px; }
+
+  .st-title { color: var(--muted); font-size: 15px; font-weight: 700; margin: 22px 4px 8px; }
+  .st-group { background: #fff; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+  .st-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; min-height: 64px; text-align: start; background: none; border: 0; font-family: inherit; color: inherit; cursor: pointer; }
+  .st-row + .st-row { border-top: 1px solid var(--line); }
+  .st-row:active { background: #f4f8f5; }
+  .st-row .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--tint); color: var(--brand); display: grid; place-items: center; flex-shrink: 0; }
+  .st-row .txt { flex: 1; min-width: 0; }
+  .st-row .nm { display: block; font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--ink); }
+  .st-row .ds { display: block; font-size: 12.5px; color: var(--muted); }
+  .st-row .chev { width: 18px; height: 18px; color: #9aaba3; }
+
+  .st-panel .section h2 { font-size: 15px; }
+  .more-h { font-size: 14px; font-weight: 700; margin-top: 16px; color: var(--ink); }
+
+  .st-panel { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 16px 20px 18px; }
+  .st-panel h2 { font-size: 18px; color: #1a1a1a; }
+  .st-panel p { font-size: 12.5px; color: #777; margin-top: 4px; line-height: 1.7; }
+  .st-wip { display: inline-block; background: #fff4e0; color: #b45f00; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-top: 8px; }
+  .st-back { background: none; border: none; color: var(--brand-2); font-weight: 700; font-size: 13px; cursor: pointer; padding: 2px 0 8px; font-family: inherit; }
+  .st-action {
+    display: block; width: 100%; text-align: start; background: #f5f7f6; border: 1px solid #e3e8e5;
+    border-radius: 12px; padding: 13px 14px; font-size: 14px; font-weight: 600; color: #1a1a1a;
+    margin-top: 8px; cursor: pointer; font-family: inherit;
+  }
+  .st-action:active { background: #e9eeeb; }
+  .st-toast {
+    position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    background: #1a1a1a; color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 1000; max-width: 90%; text-align: center;
+  }
+  .st-toast.show { opacity: 0.95; }
+
+  /* ===== شريط التنقل السفلي ===== */
+  .nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; z-index: 50; background: rgba(255,255,255,0.97); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .nav button { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; background: none; border: 0; font-family: inherit; font-size: 11.5px; font-weight: 600; color: var(--muted); border-radius: 12px; cursor: pointer; }
+  .nav button[aria-current=page] { color: var(--brand); }
+  .nav button[aria-current=page] .ico { background: var(--tint); border-radius: 12px; width: 44px; height: 28px; padding: 3px 11px; }
+  .nav .sell { color: var(--brand); }
+  .nav .sell .fab { width: 56px; height: 56px; border-radius: 50%; background: var(--amber); color: var(--amber-ink); display: grid; place-items: center; margin-top: -26px; border: 4px solid var(--canvas); box-shadow: 0 6px 14px rgba(14,59,46,0.25); }
+  .nav .sell .fab .ico { width: 26px; height: 26px; stroke-width: 2.4; }
+  .nav .sell > span:last-child { margin-top: -1px; }
+
+  /* ===================== نظام المنتجات (localStorage) ===================== */
+  .pr-note { font-size: 11.5px; color: #8a6100; background: #fff8e6; border-radius: 10px; padding: 8px 10px; margin-top: 10px; line-height: 1.6; }
+  .pr-warn { font-size: 12px; color: #b3261e; background: #fdecea; border-radius: 10px; padding: 8px 10px; margin-top: 8px; line-height: 1.6; }
+  .pr-add { background: #e8f1fd; border-color: #c9dcf5; color: #1a5c9c; text-align: center; font-weight: 700; margin-top: 12px; }
+  .pr-form { background: #f8faf9; border: 1px solid #e3e8e5; border-radius: 14px; padding: 14px; margin-top: 10px; }
+  .pr-form-title { font-size: 14px; font-weight: 800; color: #1a1a1a; }
+  .pr-field { margin-top: 10px; }
+  .pr-field label { display: block; font-size: 12px; font-weight: 600; color: #555; }
+  .pr-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pr-error { color: #c0392b; font-size: 12.5px; font-weight: 600; min-height: 16px; margin-top: 8px; }
+  .pr-form-actions { display: flex; gap: 8px; }
+  .pr-form-actions .btn { flex: 1; }
+  .pr-search { margin-top: 12px; }
+  .pr-count { font-size: 12px; color: #888; margin: 8px 2px 4px; }
+  .pr-item { border: 1px solid #e9eeeb; border-radius: 14px; padding: 12px; margin-top: 8px; background: #fff; }
+  .pr-item.editing { border-color: #1a5c9c; box-shadow: 0 0 0 2px rgba(26,92,156,0.15); }
+  .pr-item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .pr-name { font-size: 15px; font-weight: 800; color: #1a1a1a; word-break: break-word; }
+  .pr-cat { font-size: 11px; color: #1a5c9c; background: #e8f1fd; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .pr-cat.none { color: #999; background: #f2f2f2; }
+  .pr-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+  .pr-stat { background: #f5f7f6; border-radius: 10px; padding: 7px 4px; text-align: center; }
+  .pr-stat span { display: block; font-size: 11px; color: #888; }
+  .pr-stat b { display: block; font-size: 14px; color: #1a1a1a; margin-top: 2px; direction: ltr; }
+  .pr-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; margin: 8px 0 0 4px; }
+  .pr-badge.loss { background: #fdecea; color: #c0392b; }
+  .pr-badge.out { background: #fff4e0; color: #b45f00; }
+  .pr-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .pr-btn { flex: 1; border: none; border-radius: 10px; padding: 9px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; background: #eef2f0; color: #1a1a1a; }
+  .pr-btn.del { background: #fdecea; color: #c0392b; }
+  .pr-btn.del.confirm { background: #c0392b; color: #fff; }
+
+  /* ===================== المخزون (localStorage) ===================== */
+  #st-panel-inventory [hidden] { display: none !important; }
+  .iv-alert { background: #fff4e0; border: 1px solid #f0d3a0; color: #8a4a00; border-radius: 12px; padding: 10px 12px; margin-top: 10px; font-size: 12.5px; font-weight: 600; line-height: 1.8; }
+  .iv-filter { display: flex; gap: 8px; margin-top: 10px; }
+  .iv-chip { flex: 1; border: 1px solid #e3e8e5; background: #f5f7f6; color: #555; border-radius: 20px; padding: 7px 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .iv-chip.active { background: #b45f00; border-color: #b45f00; color: #fff; }
+  .pr-item.op-open { border-color: #b45f00; box-shadow: 0 0 0 2px rgba(180,95,0,0.15); }
+  .iv-qty { text-align: center; background: #f5f7f6; border-radius: 10px; padding: 8px 4px; margin-top: 10px; }
+  .iv-qty span { display: block; font-size: 11px; color: #888; }
+  .iv-qty b { display: block; font-size: 22px; color: #1a1a1a; margin-top: 2px; direction: ltr; }
+  .iv-qty.zero b { color: #b45f00; }
+  .pr-btn.add { background: #e6f4ec; color: #1a7a4c; }
+  .pr-btn.sub { background: #fdecea; color: #c0392b; }
+  .iv-op { background: #f8faf9; border: 1px solid #e3e8e5; border-radius: 12px; padding: 12px; margin-top: 10px; }
+  .iv-op-title { font-size: 13px; font-weight: 800; color: #1a1a1a; }
+  .iv-op label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-top: 8px; }
+  .iv-log-title { font-size: 15px; font-weight: 800; color: #1a1a1a; margin: 22px 2px 0; padding-top: 14px; border-top: 1px dashed #ddd; }
+  .iv-log-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+  .iv-log-item:last-child { border-bottom: none; }
+  .iv-log-ic { flex: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; }
+  .iv-log-ic.add { background: #e6f4ec; color: #1a7a4c; }
+  .iv-log-ic.deduct { background: #fdecea; color: #c0392b; }
+  .iv-log-main { flex: 1; min-width: 0; }
+  .iv-log-name { font-size: 13.5px; font-weight: 700; color: #1a1a1a; word-break: break-word; }
+  .iv-log-meta { font-size: 11.5px; color: #888; margin-top: 2px; line-height: 1.6; }
+  .iv-date { display: inline-block; direction: ltr; unicode-bidi: isolate; }
+  .iv-log-qty { flex: none; font-size: 15px; direction: ltr; unicode-bidi: isolate; }
+  .iv-log-qty.add { color: #1a7a4c; }
+  .iv-log-qty.deduct { color: #c0392b; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+  <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 017.5-2"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2.5l2.2 10.5h10.3L20 8H6.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.3c2.4.2 4 1.9 4 4.7"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h13v3"/><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="16.5" cy="13.5" r="1.2"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1v-9z"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15L6 16z"/><path d="M10 21h4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+</svg>
+
+<!-- شاشة دخول المتجر: تظهر افتراضيًا وتمنع أي وصول للتطبيق أو البيانات قبل تسجيل دخول ناجح -->
+<div id="storeLoginOverlay" style="display:flex; position:fixed; inset:0; background:#f4f4f4; z-index:1000; align-items:center; justify-content:center; padding:20px;">
+  <div class="card" style="width:100%; max-width:340px; margin:0;">
+    <div style="font-size:17px; font-weight:800; margin-bottom:4px; text-align:center;">🏪 دخول المتجر</div>
+    <div style="font-size:12px; color:#666; margin-bottom:14px; text-align:center;">كل متجر له حساب دخول خاص به</div>
+    <input type="email" id="storeLoginEmail" autocomplete="username" placeholder="البريد الإلكتروني للمتجر" style="margin-bottom:8px;">
+    <input type="password" id="storeLoginPassword" autocomplete="current-password" placeholder="كلمة السر" style="margin-bottom:8px;" onkeydown="if(event.key==='Enter') submitStoreLogin();">
+    <div id="storeLoginError" style="color:#c0392b; font-size:12px; min-height:16px; margin-bottom:6px;"></div>
+    <button class="btn small" id="storeLoginBtn" style="width:100%;" onclick="submitStoreLogin()">دخول</button>
+  </div>
+</div>
+
+<div class="wrap" id="appRoot" style="display:none;">
+  <div class="header">
+    <div>
+      <h1 id="storeTitle">تطبيق التاجر</h1>
+      <div class="date" id="storeDate"></div>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="icon-btn" id="adminBtn" onclick="toggleAdmin()" aria-label="دخول كمسؤول">
+        <svg class="ico adm-closed" viewBox="0 0 24 24"><use href="#i-lock"/></svg>
+        <svg class="ico adm-open" viewBox="0 0 24 24"><use href="#i-unlock"/></svg>
+        <span class="adm-txt">مسؤول</span>
+      </button>
+      <button type="button" class="icon-btn" onclick="storeLogout()" aria-label="خروج">
+        <svg class="ico" viewBox="0 0 24 24"><use href="#i-logout"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="offline" id="offlineBanner" role="alert" hidden>
+    <svg class="ico" viewBox="0 0 24 24"><use href="#i-alert"/></svg>
+    <div><b>لا يوجد اتصال بالخادم</b>تحقق من الإنترنت ثم أعد المحاولة.</div>
+    <button type="button" onclick="location.reload()">إعادة المحاولة</button>
+  </div>
+
+  <!-- نافذة إدخال الرمز السري (بدل prompt العادي)، بحقل من نوع password يخفي الأرقام بنقاط -->
+  <div id="pinOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:999; align-items:center; justify-content:center; padding:20px;">
+    <div class="card" style="width:100%; max-width:340px; margin:0;">
+      <div style="font-size:15px; font-weight:700; margin-bottom:10px;">🔒 أدخل الرمز السري</div>
+      <input type="password" id="pinInput" inputmode="numeric" autocomplete="off"
+        style="letter-spacing:6px; font-size:18px; text-align:center;" placeholder="••••">
+      <div id="pinError" style="color:#c0392b; font-size:12px; min-height:16px; margin-top:6px;"></div>
+      <button class="btn small" style="margin-top:10px;" onclick="submitPin()">دخول</button>
+      <button class="btn small secondary" style="margin-top:6px;" onclick="closePinDialog()">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- تحذير إذا الصفحة مفتوحة من متصفح واتساب/فيسبوك الداخلي — الإشعارات ما تشتغل فيه -->
+  <div class="card" id="inAppWarning" style="display:none; background:#fdecea; border:2px solid #d93025; text-align:center;">
+    <div style="font-size:14px; font-weight:800; color:#b3261e;">⚠️ الإشعارات لن تشتغل في هذا المتصفح</div>
+    <div style="font-size:12.5px; color:#8a3a34; margin-top:6px; line-height:1.7;">
+      يبدو أنك فاتح البرنامج من داخل واتساب مباشرة، وهذا المتصفح لا يدعم الإشعارات.<br>
+      اضغط ⋯ (النقاط الثلاث) أعلى الصفحة واختر <b>"فتح في Safari"</b>، أو انسخ الرابط وافتحه في Safari.
+    </div>
+    <button class="btn small" style="margin-top:10px; background:#b3261e;" onclick="copyPageLink()">🔗 نسخ الرابط لفتحه في Safari</button>
+    <div class="copied" id="copiedMsg"></div>
+  </div>
+
+
+  <!-- ===================== لوحة تحكم المتجر (واجهة فقط، بدون وظائف) ===================== -->
+  <div id="storeDashboard">
+    <div id="stHome">
+      <section class="hero" aria-label="ملخص اليوم">
+        <div class="hero-label">مبيعات اليوم</div>
+        <div class="hero-value"><span class="num" id="hSales">—</span></div>
+        <div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <p class="hero-cap">ستظهر أرقام اليوم هنا بعد تفعيل المبيعات والمصاريف والعملاء.</p>
+        <div class="strip">
+          <div><small>مصاريف اليوم</small><strong class="num" id="hExp">—</strong></div>
+          <div><small>العملاء</small><strong class="num" id="hCus">—</strong></div>
+          <button type="button" data-st-open="inventory"><small><span class="dot"></span>مخزون منخفض</small><strong class="num" id="hLow">—</strong></button>
+        </div>
+      </section>
+
+      <div class="push-banner" id="pushBanner" hidden>
+        <div class="ic"><svg class="ico" viewBox="0 0 24 24"><use href="#i-bell"/></svg></div>
+        <p>فعّل الإشعارات لتصلك تنبيهات المتجر على هذا الجهاز.</p>
+        <button type="button" class="go" onclick="enablePushNotifications()">تفعيل</button>
+        <button type="button" class="x" id="pushBannerClose" aria-label="إخفاء"><svg class="ico" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+      </div>
+
+      <div class="st-title">أقسام المتجر</div>
+      <div class="st-group">
+        <button type="button" class="st-row" data-st-open="sales">
+          <span class="ic"><svg class="ico" viewBox="0 0 24 24"><use href="#i-receipt"/></svg></span>
+          <span class="txt"><span class="nm">المبيعات</span><span class="ds">فواتير وعمليات البيع</span></span>
+          <svg class="ico chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg>
+        </button>
+        <button type="button" class="st-row" data-st-open="products">
+          <span class="ic"><svg class="ico" viewBox="0 0 24 24"><use href="#i-package"/></svg></span>
+          <span class="txt"><span class="nm">المنتجات</span><span class="ds">قائمة المنتجات والأسعار</span></span>
+          <svg class="ico chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg>
+        </button>
+        <button type="button" class="st-row" data-st-open="inventory">
+          <span class="ic"><svg class="ico" viewBox="0 0 24 24"><use href="#i-archive"/></svg></span>
+          <span class="txt"><span class="nm">المخزون</span><span class="ds">الكميات والجرد</span></span>
+          <svg class="ico chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg>
+        </button>
+        <button type="button" class="st-row" data-st-open="purchases">
+          <span class="ic"><svg class="ico" viewBox="0 0 24 24"><use href="#i-cart"/></svg></span>
+          <span class="txt"><span class="nm">المشتريات</span><span class="ds">فواتير الموردين</span></span>
+          <svg class="ico chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg>
+        </button>
+        <button type="button" class="st-row" data-st-open="expenses">
+          <span class="ic"><svg class="ico" viewBox="0 0 24 24"><use href="#i-wallet"/></svg></span>
+          <span class="txt"><span class="nm">المصاريف</span><span class="ds">إيجار، كهرباء، أجور…</span></span>
+          <svg class="ico chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg>
+        </button>
+        <button type="button" class="st-row" data-st-open="customers">
+          <span class="ic"><svg class="ico" viewBox="0 0 24 24"><use href="#i-users"/></svg></span>
+          <span class="txt"><span class="nm">العملاء</span><span class="ds">بيانات العملاء والمستحقات</span></span>
+          <svg class="ico chev" viewBox="0 0 24 24"><use href="#i-chev"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="stPanels">
+    <div class="st-panel" id="st-panel-sales" style="--c:#1a7a4c" hidden>
+      <button type="button" class="st-back" data-st-back>→ رجوع للوحة التحكم</button>
+      <h2>💰 المبيعات</h2>
+      <p>إدارة عمليات البيع وفواتير العملاء.</p>
+      <div class="st-wip">🚧 واجهة فقط حاليًا — الوظائف قيد التطوير</div>
+      <button type="button" class="st-action" data-st-soon="🚧 عملية بيع جديدة — قيد التطوير">➕ عملية بيع جديدة</button>
+      <button type="button" class="st-action" data-st-soon="🚧 سجل المبيعات — قيد التطوير">📋 سجل المبيعات</button>
+      <button type="button" class="st-action" data-st-soon="🚧 تقرير المبيعات — قيد التطوير">📈 تقرير المبيعات</button>
+    </div>
+    <div class="st-panel" id="st-panel-products" style="--c:#1a5c9c" hidden>
+      <button type="button" class="st-back" data-st-back>→ رجوع للوحة التحكم</button>
+      <h2>📦 المنتجات</h2>
+      <p>إدارة المنتجات وأسعارها وكمياتها وتصنيفاتها.</p>
+      <div class="pr-note">💾 تُحفظ المنتجات في هذا المتصفح فقط (localStorage)، ولا تتزامن مع هواتف أو متصفحات أخرى.</div>
+      <div class="pr-warn" id="prStorageWarn" hidden></div>
+
+      <button type="button" class="st-action pr-add" id="prToggleForm">➕ إضافة منتج</button>
+
+      <form id="prForm" class="pr-form" novalidate hidden>
+        <div class="pr-form-title" id="prFormTitle">➕ منتج جديد</div>
+        <div class="pr-field">
+          <label for="prName">اسم المنتج *</label>
+          <input type="text" id="prName" maxlength="80" autocomplete="off">
+        </div>
+        <div class="pr-field">
+          <label for="prCategory">التصنيف</label>
+          <input type="text" id="prCategory" maxlength="40" list="prCategoryList" autocomplete="off" placeholder="مثال: مشروبات، ملابس…">
+          <datalist id="prCategoryList"></datalist>
+        </div>
+        <div class="pr-row2">
+          <div class="pr-field">
+            <label for="prBuy">سعر الشراء *</label>
+            <input type="text" id="prBuy" inputmode="decimal" autocomplete="off" placeholder="0">
+          </div>
+          <div class="pr-field">
+            <label for="prSell">سعر البيع *</label>
+            <input type="text" id="prSell" inputmode="decimal" autocomplete="off" placeholder="0">
+          </div>
+        </div>
+        <div class="pr-field">
+          <label for="prQty">الكمية *</label>
+          <input type="text" id="prQty" inputmode="numeric" autocomplete="off" placeholder="0">
+        </div>
+        <div class="pr-error" id="prError" role="alert"></div>
+        <div class="pr-form-actions">
+          <button type="submit" class="btn small" id="prSave">💾 حفظ</button>
+          <button type="button" class="btn small secondary" id="prCancel">إلغاء</button>
+        </div>
+      </form>
+
+      <div class="pr-search">
+        <input type="text" id="prSearch" placeholder="🔍 ابحث باسم المنتج أو التصنيف" autocomplete="off">
+      </div>
+      <div class="pr-count" id="prCount"></div>
+      <div id="prList"></div>
+    </div>
+    <div class="st-panel" id="st-panel-inventory" style="--c:#b45f00" hidden>
+      <button type="button" class="st-back" data-st-back>→ رجوع للوحة التحكم</button>
+      <h2>🗃️ المخزون</h2>
+      <p>كمية كل منتج الحالية، مع إضافة الكميات وخصمها وسجل كامل للحركات.</p>
+      <div class="pr-note">💾 المخزون هو كميات «المنتجات» نفسها، ويُحفظ مع سجل الحركات في هذا المتصفح فقط (localStorage)، ولا يتزامن مع هواتف أو متصفحات أخرى.</div>
+      <div class="pr-warn" id="ivWarn" hidden></div>
+      <div class="iv-alert" id="ivAlert" role="status" hidden></div>
+
+      <div class="pr-search">
+        <input type="text" id="ivSearch" placeholder="🔍 ابحث عن منتج في المخزون" autocomplete="off">
+      </div>
+      <div class="iv-filter">
+        <button type="button" class="iv-chip active" id="ivFilterAll" data-iv-filter="all">الكل</button>
+        <button type="button" class="iv-chip" id="ivFilterOut" data-iv-filter="out">❌ النافدة</button>
+      </div>
+      <div class="pr-count" id="ivCount"></div>
+      <div id="ivList"></div>
+
+      <div class="iv-log-title">📜 سجل حركات المخزون</div>
+      <div class="pr-count" id="ivLogCount"></div>
+      <div id="ivLog"></div>
+      <button type="button" class="st-action" id="ivLogMore" hidden>⬇️ عرض المزيد من الحركات</button>
+    </div>
+    <div class="st-panel" id="st-panel-purchases" style="--c:#6a1a9c" hidden>
+      <button type="button" class="st-back" data-st-back>→ رجوع للوحة التحكم</button>
+      <h2>🛒 المشتريات</h2>
+      <p>تسجيل مشتريات المتجر وفواتير الموردين.</p>
+      <div class="st-wip">🚧 واجهة فقط حاليًا — الوظائف قيد التطوير</div>
+      <button type="button" class="st-action" data-st-soon="🚧 فاتورة شراء جديدة — قيد التطوير">➕ فاتورة شراء جديدة</button>
+      <button type="button" class="st-action" data-st-soon="🚧 سجل المشتريات — قيد التطوير">📋 سجل المشتريات</button>
+      <button type="button" class="st-action" data-st-soon="🚧 الموردون — قيد التطوير">🏭 الموردون</button>
+    </div>
+    <div class="st-panel" id="st-panel-expenses" style="--c:#c0392b" hidden>
+      <button type="button" class="st-back" data-st-back>→ رجوع للوحة التحكم</button>
+      <h2>💵 المصاريف</h2>
+      <p>تسجيل مصاريف المتجر ومتابعتها.</p>
+      <div class="st-wip">🚧 واجهة فقط حاليًا — الوظائف قيد التطوير</div>
+      <button type="button" class="st-action" data-st-soon="🚧 تسجيل مصروف — قيد التطوير">➕ تسجيل مصروف</button>
+      <button type="button" class="st-action" data-st-soon="🚧 سجل المصاريف — قيد التطوير">📋 سجل المصاريف</button>
+      <button type="button" class="st-action" data-st-soon="🚧 ملخص الشهر — قيد التطوير">📊 ملخص الشهر</button>
+    </div>
+    <div class="st-panel" id="st-panel-customers" style="--c:#0f4c5c" hidden>
+      <button type="button" class="st-back" data-st-back>→ رجوع للوحة التحكم</button>
+      <h2>👥 العملاء</h2>
+      <p>إدارة بيانات العملاء ومستحقاتهم.</p>
+      <div class="st-wip">🚧 واجهة فقط حاليًا — الوظائف قيد التطوير</div>
+      <button type="button" class="st-action" data-st-soon="🚧 إضافة عميل — قيد التطوير">➕ إضافة عميل</button>
+      <button type="button" class="st-action" data-st-soon="🚧 قائمة العملاء — قيد التطوير">📋 قائمة العملاء</button>
+      <button type="button" class="st-action" data-st-soon="🚧 المستحقات والديون — قيد التطوير">💳 المستحقات والديون</button>
+    </div>
+    <div class="st-panel" id="st-panel-more" hidden>
+      <button type="button" class="st-back" data-st-back>→ رجوع للوحة التحكم</button>
+      <h2>المزيد</h2>
+      <p>الإشعارات وحالة الاتصال.</p>
+
+      <div class="more-h">🔔 الإشعارات</div>
+      <button class="btn small" id="enablePushBtn" style="background:#1a5c9c;" onclick="enablePushNotifications()">🔔 تفعيل الإشعارات في هذا الجهاز</button>
+      <button class="btn small secondary" style="margin-top:6px;" onclick="checkNotificationStatus()">🔍 فحص حالة الإشعارات</button>
+      <button class="btn small secondary" style="margin-top:6px;" onclick="testMyNotification()">🔔 اختبار الإشعار الآن</button>
+      <div class="status" id="pushStatus" style="margin-top:4px;"></div>
+
+
+  <!-- الأجهزة المسجّلة للإشعارات + إرسال إشعار جماعي (وضع المسؤول) -->
+  <div class="section admin-only">
+    <h2>📲 الأجهزة المسجّلة للإشعارات</h2>
+    <div id="pushTokensSummary" style="font-size:13px; margin-bottom:8px; color:#555;"></div>
+    <div id="pushTokensList"></div>
+
+    <div style="margin-top:16px; padding-top:14px; border-top:1px dashed #ccc;">
+      <b style="font-size:13px;">📢 إرسال إشعار لجميع من فعّل (حتى والتطبيق مقفول)</b>
+      <input type="text" id="broadcastTitle" placeholder="عنوان الإشعار" style="margin-top:8px;">
+      <input type="text" id="broadcastBody" placeholder="نص الإشعار" style="margin-top:6px;">
+      <button class="btn small" id="sendBroadcastBtn" style="margin-top:8px; background:#8a1a1a;" onclick="sendBroadcastNotification()">📢 إرسال لجميع من فعّل الإشعارات</button>
+    </div>
+  </div>
+
+      <div class="more-h">حالة الاتصال</div>
+      <div class="status" id="syncStatus"></div>
+    </div>
+    </div>
+  </div>
+
+<nav class="nav" aria-label="التنقل الرئيسي">
+  <button type="button" id="navHome" data-st-home aria-current="page"><svg class="ico" viewBox="0 0 24 24"><use href="#i-home"/></svg>الرئيسية</button>
+  <button type="button" data-nav="products" data-st-open="products"><svg class="ico" viewBox="0 0 24 24"><use href="#i-package"/></svg>المنتجات</button>
+  <button type="button" class="sell" data-st-soon="🚧 عملية بيع جديدة — قيد التطوير" aria-label="بيع جديد"><span class="fab"><svg class="ico" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span><span>بيع جديد</span></button>
+  <button type="button" data-nav="inventory" data-st-open="inventory"><svg class="ico" viewBox="0 0 24 24"><use href="#i-archive"/></svg>المخزون</button>
+  <button type="button" data-nav="more" data-st-open="more"><svg class="ico" viewBox="0 0 24 24"><use href="#i-dots"/></svg>المزيد</button>
+</nav>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script>
+/* namespace التخزين المحلي (المنتجات/المخزون): يُقرأ مرة واحدة فقط عند تحميل الصفحة، ويستعمله
+   سكريبتا المنتجات والمخزون أدناه. ثابت طول عمر الصفحة، وonAuthStateChanged يقارنه بـ storeId
+   الحساب الموثَّق: إذا اختلفا نعيد تحميل الصفحة قبل عرض أي شيء أو حفظ أي بيانات. */
+window.TAJIR_BOOT_NS = (function () { try { return localStorage.getItem('dar.storeId') || null; } catch (e) { return null; } })();
+
+/* ===================== إعداد Firebase (تخزين مشترك حقيقي) ===================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBQrCO1BOQ-0D9isZdTtbTUE4EK6vuGppA",
+  authDomain: "tajirapp-fe79d.firebaseapp.com",
+  databaseURL: "https://tajirapp-fe79d-default-rtdb.firebaseio.com",
+  projectId: "tajirapp-fe79d",
+  storageBucket: "tajirapp-fe79d.firebasestorage.app",
+  messagingSenderId: "790673886877",
+  appId: "1:790673886877:web:b58c57e4e70536efab4e74"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+/* ===================== عزل المتاجر (Multi-Tenant Isolation) =====================
+   بدل الدخول المجهول (Anonymous Auth) القديم، كل متجر عندو الآن حساب دخول خاص بيه
+   (بريد/كلمة سر يُنشئه المسؤول عبر scripts/create-store.js). عند الدخول، Firebase
+   كيرجع "custom claim" اسمها storeId مربوطة بحساب المتجر (تُضبط فقط من السيرفر عبر
+   Admin SDK، ما يقدرش المستخدم يبدّلها من المتصفح). كل قراءة وكتابة فقاعدة البيانات
+   كتمر عبر storeRef() اللي كتبني المسار من storeId المستخرج من التوكن المُتحقَّق منه
+   فقط — أبدًا من أي قيمة يدخلها/يبدّلها المستخدم فالواجهة أو localStorage — وقواعد
+   الأمان (database.rules.json) كترفض أي طلب ما يطابقش storeId ديال التوكن، حتى لو
+   المستخدم بدّل المسار يدويًا من الكونسول. هاد الطبقة الثانية (Security Rules) هي
+   اللي كتفرض العزل فعليًا على مستوى السيرفر، الفحص هنا فالواجهة هو راحة استخدام فقط. */
+let currentStoreId = null;   // ما كيتحطش أبدًا غير من claims التوكن المتحقق منه
+let currentUser = null;
+let authReady = new Promise(() => {}); // كيتبدّل لـ promise حقيقي بعد نجاح الدخول
+
+function storeRef(path) {
+  if (!currentStoreId) throw new Error('لا يوجد متجر مسجّل الدخول — لا يمكن الوصول لقاعدة البيانات');
+  const base = 'stores/' + currentStoreId;
+  return db.ref(path ? base + '/' + path : base);
+}
+
+function showLoginScreen(message) {
+  const overlay = document.getElementById('storeLoginOverlay');
+  const app = document.getElementById('appRoot');
+  if (overlay) overlay.style.display = 'flex';
+  if (app) app.style.display = 'none';
+  const err = document.getElementById('storeLoginError');
+  if (err) err.textContent = message || '';
+}
+
+function hideLoginScreen() {
+  const overlay = document.getElementById('storeLoginOverlay');
+  const app = document.getElementById('appRoot');
+  if (overlay) overlay.style.display = 'none';
+  if (app) app.style.display = '';
+}
+
+async function submitStoreLogin() {
+  const emailEl = document.getElementById('storeLoginEmail');
+  const passEl = document.getElementById('storeLoginPassword');
+  const btn = document.getElementById('storeLoginBtn');
+  const email = (emailEl.value || '').trim();
+  const password = passEl.value || '';
+  if (!email || !password) {
+    showLoginScreen('أدخل البريد وكلمة السر');
+    return;
+  }
+  btn.disabled = true;
+  showLoginScreen('⏳ جارٍ التحقق...');
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    // onAuthStateChanged هو اللي غادي يكمّل (يتحقق من storeId ويحمّل البيانات)
+  } catch (err) {
+    console.error('خطأ تسجيل الدخول:', err);
+    let msg = '⚠️ فشل تسجيل الدخول';
+    if (err && (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential')) {
+      msg = '⚠️ البريد أو كلمة السر غير صحيحة';
+    }
+    showLoginScreen(msg);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function storeLogout() {
+  // قبل signOut: مسح توكن هذا الجهاز من المتجر (يحتاج المستخدم مسجَّل الدخول). مهلة 8 ثواني حتى ما يعلق الخروج بلا إنترنت.
+  try { await Promise.race([unregisterPushToken(), new Promise(r => setTimeout(r, 8000))]); } catch (e) { console.error(e); }
+  try { await auth.signOut(); } catch (e) { console.error(e); }
+  currentStoreId = null;
+  currentUser = null;
+  try { localStorage.removeItem('dar.storeId'); } catch (e) {}
+  try { localStorage.removeItem('isAdmin'); } catch (e) {}
+  location.reload();
+}
+
+/* مطابقة namespace التخزين المحلي مع المتجر الموثَّق (يُستدعى من المستمع أدناه قبل عرض أي شيء).
+   سكريبتا المنتجات/المخزون اشتغلو بـ window.TAJIR_BOOT_NS؛ إذا خالف storeId (مثلاً null بعد الخروج، أو
+   متجر آخر) نعيد تحميل الصفحة قبل ما يبان أي شيء أو يتسجّل أي شيء، فيقرا المفتاح الصحيح من البداية.
+   الحارس (sessionStorage): مرة وحدة لكل متجر فهاد التبويب، وإلا نرفض عرض التطبيق بدل الدخول فحلقة.
+   كيرجع true إذا الصفحة جاهزة للمتابعة، false إذا أُعيد التحميل أو رُفض العرض. */
+function storeNamespaceReady(storeId) {
+  if (window.TAJIR_BOOT_NS === storeId) {
+    try { sessionStorage.removeItem('tajir.nsReload'); } catch (e) {}
+    return true;
+  }
+  let saved = false, done = null;
+  try { saved = localStorage.getItem('dar.storeId') === storeId; } catch (e) {}
+  if (!saved) return true; // التخزين المحلي غير متاح أصلاً: ما كاين بيانات محلية تتخلط
+  try { done = sessionStorage.getItem('tajir.nsReload'); } catch (e) {}
+  if (done === storeId) { showLoginScreen('⚠️ تعذّر تهيئة تخزين المتجر على هذا الجهاز، أغلق التطبيق وافتحه من جديد'); return false; }
+  try { sessionStorage.setItem('tajir.nsReload', storeId); } catch (e) {}
+  try { localStorage.removeItem('isAdmin'); } catch (e) {}
+  location.reload();
+  return false;
+}
+
+/* onAuthStateChanged هو المصدر الوحيد الموثوق لهوية المستخدم والمتجر — يشتغل عند
+   فتح الصفحة (إذا الجلسة محفوظة) وعند نجاح signInWithEmailAndPassword. */
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    currentUser = null;
+    currentStoreId = null;
+    // وضع المسؤول مرتبط بالجلسة: ما يبقاش مفتوح لحساب آخر يدخل على نفس الجهاز
+    isAdmin = false;
+    try { localStorage.removeItem('isAdmin'); } catch (e) {}
+    try { updateAdminUI(); } catch (e) {}
+    showLoginScreen();
+    return;
+  }
+  try {
+    // forceRefresh=true: نتأكد أن الـ claims محدّثة (مثلاً إذا المسؤول غيّر storeId المستخدم)
+    const tokenResult = await user.getIdTokenResult(true);
+    const storeId = tokenResult.claims && tokenResult.claims.storeId;
+    if (!storeId) {
+      console.error('حساب بدون storeId مربوط — رفض الدخول');
+      showLoginScreen('⚠️ هذا الحساب غير مربوط بأي متجر، تواصل مع المسؤول');
+      await auth.signOut();
+      return;
+    }
+    currentUser = user;
+    currentStoreId = storeId;
+    const titleEl = document.getElementById('storeTitle');
+    if (titleEl) titleEl.textContent = user.displayName || 'تطبيق التاجر';
+    // كاش محلي فقط لاستعمال واجهة المنتجات/المخزون (localStorage) — لا يُستعمل أبدًا
+    // كمصدر ثقة لمسارات Firebase، هذا يبقى دائمًا مشتق من claims التوكن أعلاه فقط.
+    let previousCached = null;
+    try { previousCached = localStorage.getItem('dar.storeId'); } catch (e) {}
+    try { localStorage.setItem('dar.storeId', storeId); } catch (e) {}
+    // جلسة سابقة انتهت بدون خروج عادي ثم دخل متجر مختلف على نفس الجهاز: نبطّل التوكن القديم
+    // (غير قادرين نمسحوه من متجره لأننا مسجّلين بحساب المتجر الجديد) قبل ما نسجّلو توكن جديد.
+    const bootNs = window.TAJIR_BOOT_NS || null;
+    const switchedStore = [previousCached, bootNs].some((v) => v && v !== storeId);
+    if (switchedStore) { try { if (messaging) await messaging.deleteToken(); } catch (e) { console.error(e); } }
+    if (!storeNamespaceReady(storeId)) return;
+    hideLoginScreen();
+    authReady = Promise.resolve();
+    loadAll();
+    if (pushEnabled) registerPushToken();
+  } catch (err) {
+    console.error('خطأ أثناء التحقق من صلاحية المتجر:', err);
+    showLoginScreen('⚠️ تعذّر التحقق من الحساب، أعد المحاولة');
+  }
+});
+
+/* ===================== إشعارات Push حقيقية (تصل حتى والتطبيق مقفول) =====================
+   نستعمل Firebase Cloud Messaging (FCM): كل جهاز كيسجل "توكن" خاص بيه فقاعدة بيانات المتجر
+   (stores/{storeId}/fcmTokens)، وسيرفر الإرسال (api/send-to-all) كيستعملو باش يبعث الإشعار
+   لأجهزة هذا المتجر فقط. */
+const FCM_VAPID_KEY = "BJfeB6SBAoc0bbmO8TtQ2Erxj7vMeoFvsLGlQL_dzNGMGH8QQzpBGHs6vrnSy94gpwXYjg2q9TxsI3JGtebr9AE";
+let messaging = null;
+try {
+  if (firebase.messaging.isSupported()) {
+    messaging = firebase.messaging();
+  }
+} catch (e) {
+  console.error('Firebase Messaging غير مدعوم فهذا المتصفح:', e);
+}
+
+/* نسجل التوكن ديال هذا الجهاز فقاعدة البيانات. كل جهاز كيسجل توكن مختلف، وهذا التوكن
+   هو اللي سيرفر الإرسال غادي يستعملو باش يبعث الإشعار. */
+async function registerPushToken() {
+  if (!messaging) return;
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.register('sw.js');
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      setPushStatus('⚠️ لم يُسمح بالإشعارات، لن تصل التنبيهات لهذا الهاتف حتى لو التطبيق مقفول');
+      return;
+    }
+    const token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) {
+      setPushStatus('⚠️ تعذّر الحصول على رمز الإشعارات، أعد المحاولة');
+      return;
+    }
+    await authReady;
+
+    await storeRef('fcmTokens/' + token).set({
+      updatedAt: Date.now(),
+      ua: navigator.userAgent
+    });
+    setPushStatus('✅ الإشعارات (حتى والتطبيق مقفول) مفعّلة فهذا الهاتف');
+  } catch (err) {
+    console.error('خطأ أثناء تسجيل رمز الإشعارات:', err);
+    setPushStatus('⚠️ خطأ أثناء تفعيل الإشعارات، حاول من جديد');
+  }
+}
+
+/* عند الخروج أو تبديل المتجر: لازم توكن الإشعارات ديال هذا الجهاز ما يبقاش مرتبط بالمتجر السابق.
+   1) نمسحو من stores/{storeId}/fcmTokens ما دام المستخدم مازال مسجَّل الدخول (القواعد تشترط ذلك).
+   2) نبطّلو التوكن نفسه عند FCM (deleteToken) باش حتى لو فشل المسح بقى التوكن القديم ميت
+      (السيرفر كيمسح التوكنات الميتة تلقائيًا) والدخول الجاي كياخد توكن جديد للمتجر الجديد.
+   ما كنطلبوش إذن الإشعارات هنا إطلاقًا (فقط إذا كان ممنوحًا مسبقًا). */
+async function unregisterPushToken() {
+  if (!messaging) return;
+  let token = null;
+  try {
+    if ('serviceWorker' in navigator && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+    }
+  } catch (e) { console.error('تعذّر جلب توكن الإشعارات قبل الخروج:', e); }
+  if (token && currentStoreId && currentUser) {
+    try { await storeRef('fcmTokens/' + token).remove(); }
+    catch (e) { console.error('تعذّر مسح توكن الإشعارات من المتجر:', e); }
+  }
+  try { await messaging.deleteToken(); }
+  catch (e) { console.error('تعذّر إبطال توكن الإشعارات:', e); }
+}
+
+function setPushStatus(msg) {
+  const el = document.getElementById('pushStatus');
+  if (el) el.textContent = msg;
+}
+
+/* ===================== فحص شامل لحالة الإشعارات (تشخيص) ===================== */
+async function checkNotificationStatus() {
+  const سطور = [];
+  const إضافة = (رمز, نص) => سطور.push(`${رمز} ${نص}`);
+
+  // 1) هل المتصفح يدعم Push أصلاً
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+    إضافة('❌', 'هذا المتصفح ما كيدعمش الإشعارات إطلاقًا');
+    alert(سطور.join('\n'));
+    return;
+  }
+  إضافة('✅', 'المتصفح كيدعم الإشعارات');
+
+  if (!messaging) {
+    إضافة('❌', 'Firebase Messaging ماشي مفعّل (isSupported رجّع false) — راجع Safari/الوضع الخاص');
+  } else {
+    إضافة('✅', 'Firebase Messaging مفعّل');
+  }
+
+  // 2) حالة إذن الإشعارات
+  const إذن = Notification.permission;
+  if (إذن === 'granted') إضافة('✅', 'الإذن معطى (granted)');
+  else if (إذن === 'denied') إضافة('❌', 'الإذن مرفوض من إعدادات الهاتف/المتصفح — خاصو يتفعل يدويًا');
+  else إضافة('⚠️', 'الإذن لم يُطلب بعد (default) — دوس على "تفعيل الإشعارات"');
+
+  // 3) تسجيل الـ Service Worker (sw.js)
+  let reg = null;
+  try {
+    reg = await navigator.serviceWorker.getRegistration();
+    إضافة(reg ? '✅' : '❌', reg ? 'sw.js مسجل بنجاح' : 'sw.js ماشي مسجل — الإشعارات فالخلفية ما غاتخدمش');
+  } catch (e) {
+    إضافة('❌', 'خطأ فالتحقق من sw.js: ' + e.message);
+  }
+
+  // 4) وجود التوكن محليًا
+  let token = null;
+  if (messaging && إذن === 'granted' && reg) {
+    try {
+      token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+      إضافة(token ? '✅' : '❌', token ? ('توكن موجود فهذا الهاتف: ' + token.substring(0, 16) + '…') : 'ماكاينش توكن محلي');
+    } catch (e) {
+      إضافة('❌', 'خطأ فجلب التوكن: ' + e.message);
+    }
+  } else {
+    إضافة('⚠️', 'تخطينا فحص التوكن (خاصو إذن + sw مسجل أولاً)');
+  }
+
+  // 5) هل التوكن مسجل فعليًا فقاعدة البيانات (Firebase)
+  if (token) {
+    try {
+      await authReady;
+      const snap = await storeRef('fcmTokens/' + token).once('value');
+      if (snap.exists()) {
+        إضافة('✅', 'التوكن مسجل فقاعدة البيانات');
+      } else {
+        إضافة('❌', 'التوكن غير مسجل فقاعدة البيانات — دوس "تفعيل الإشعارات" باش يتسجل');
+      }
+    } catch (e) {
+      إضافة('❌', 'خطأ فالتحقق من قاعدة البيانات: ' + e.message);
+    }
+  }
+
+  console.log(سطور.join('\n'));
+  alert('🔍 تشخيص حالة الإشعارات:\n\n' + سطور.join('\n'));
+}
+
+// رمز المسؤول لا يوجد فالواجهة إطلاقًا (لا نص ولا بصمة). التحقق منه يتم فقط فالسيرفر
+// (api/send-to-all.js) ضد متغير البيئة BROADCAST_PIN فـ Vercel. الواجهة تبعث الرمز اللي
+// يكتبه المستخدم عبر HTTPS والسيرفر هو اللي يقرر. حالة isAdmin هنا مجرد إظهار/إخفاء للواجهة
+// وليست حماية — الحماية الفعلية عند السيرفر.
+// نخزّن حالة "دخول كمسؤول" فـ localStorage باش ما تتفقدش لو التطبيق أعاد التحميل فالخلفية
+// (كيوقع بزاف فتطبيقات PWA على الآيفون)، فما يبقاش أي زر (بدل/حذف/إضافة...) يبان خدام ويطلع
+// تنبيه "خصك تدخل كمسؤول" بصمت بلا ما ينتبه له حد.
+let isAdmin = localStorage.getItem('isAdmin') === '1';
+
+async function toggleAdmin() {
+  if (isAdmin) {
+    isAdmin = false;
+    localStorage.removeItem('isAdmin');
+    updateAdminUI();
+    return;
+  }
+  openPinDialog();
+}
+
+function openPinDialog() {
+  const overlay = document.getElementById('pinOverlay');
+  const input = document.getElementById('pinInput');
+  document.getElementById('pinError').textContent = '';
+  input.value = '';
+  overlay.style.display = 'flex';
+  setTimeout(() => input.focus(), 50);
+  input.onkeydown = (e) => { if (e.key === 'Enter') submitPin(); };
+}
+
+function closePinDialog() {
+  document.getElementById('pinOverlay').style.display = 'none';
+}
+
+async function submitPin() {
+  const input = document.getElementById('pinInput');
+  const errEl = document.getElementById('pinError');
+  const entered = input.value;
+  if (!entered) return;
+  errEl.textContent = '';
+  try {
+    if (!currentUser) { errEl.textContent = 'يجب تسجيل الدخول أولاً'; return; }
+    const idToken = await currentUser.getIdToken();
+    const res = await fetch(BROADCAST_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({ pin: entered, verifyOnly: true })
+    });
+    if (res.ok) {
+      isAdmin = true;
+      localStorage.setItem('isAdmin', '1');
+      closePinDialog();
+      updateAdminUI();
+      return;
+    }
+    errEl.textContent = res.status === 429 ? 'محاولات كثيرة، حاول بعد قليل'
+      : res.status === 503 ? 'الخدمة غير مهيّأة بعد'
+      : 'الرمز غير صحيح';
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = 'تعذّر الاتصال بالخادم';
+  }
+  input.value = '';
+  input.focus();
+}
+function updateAdminUI() {
+  const btn = document.getElementById('adminBtn');
+  btn.classList.toggle('on', isAdmin);
+  btn.setAttribute('aria-label', isAdmin ? 'وضع المسؤول (اضغط للخروج)' : 'دخول كمسؤول');
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+  renderPushTokens();
+}
+
+/* حماية من ثغرة XSS: أي اسم أو ملاحظة يدخلها المستخدم قد تحتوي رموز HTML خطيرة
+   (مثل < أو " أو ') وتُعرض تلقائيًا عند كل من يفتح التطبيق عبر المزامنة، لذلك
+   يجب "تعقيمها" دائمًا قبل إدراجها داخل innerHTML أو داخل أي attribute. */
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+const weekdayNames = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+
+function formatDate(d) {
+  const months = ["يناير","فبراير","مارس","أبريل","ماي","يونيو","يوليوز","غشت","شتنبر","أكتوبر","نونبر","دجنبر"];
+  return `${weekdayNames[d.getDay()]}، ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/* ===================== بيانات المتجر (Firebase) ===================== */
+let fcmTokensData = {}; // { token: {updatedAt, ua} } — الأجهزة اللي فعّلت الإشعار الحقيقي (Push)
+
+function loadAll() {
+  setStatus('⏳ جارٍ الاتصال بالخادم...');
+  storeRef('fcmTokens').on('value', (snapshot) => {
+    try {
+      fcmTokensData = snapshot.val() || {};
+      setStatus('✅ متصل بالخادم');
+      renderPushTokens();
+    } catch (err) {
+      console.error('خطأ أثناء معالجة/عرض البيانات:', err);
+      setStatus('⚠️ البيانات وصلت لكن صار خطأ بالعرض — أعد تحميل الصفحة');
+    }
+  }, (error) => {
+    console.error('خطأ اتصال Firebase:', error);
+    setStatus('⚠️ لا يوجد اتصال بالخادم، تحقق من الإنترنت');
+  });
+}
+function setStatus(msg) {
+  document.getElementById('syncStatus').textContent = msg;
+  const ob = document.getElementById('offlineBanner');
+  if (ob) ob.hidden = !String(msg).startsWith('⚠️ لا يوجد اتصال');
+}
+
+/* ===================== إرسال إشعار جماعي حقيقي (عبر Vercel + FCM) =====================
+   كيبعث لجميع التوكنات المسجلة، حتى الهواتف اللي التطبيق مقفول عندها بالكامل.
+    الرمز (PIN) كيتحقق منو فالسيرفر (Vercel) فقط ضد BROADCAST_PIN؛ ما كاين حتى رمز ولا بصمة فالواجهة. */
+const BROADCAST_ENDPOINT = 'https://tajirapp-new.vercel.app/api/send-to-all';
+
+async function sendBroadcastNotification() {
+  if (!isAdmin) { alert('يجب عليك الدخول كمسؤول'); return; }
+
+  const title = document.getElementById('broadcastTitle').value.trim();
+  const body = document.getElementById('broadcastBody').value.trim();
+  if (!title || !body) { alert('خاصك تكتب العنوان والنص'); return; }
+
+  const pin = prompt('أدخل رمز المسؤول مرة أخرى للتأكيد:');
+  if (!pin) return;
+
+  const btn = document.getElementById('sendBroadcastBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإرسال...';
+
+  try {
+    // خاص السيرفر يتحقق من storeId هذا الحساب (من التوكن نفسه، ماشي من أي حقل
+    // نبعثوه هنا) قبل ما يبعث الإشعار — نبعثو ID token حقيقي فـ Authorization
+    if (!currentUser) { alert('⚠️ يجب تسجيل الدخول أولاً'); return; }
+    const idToken = await currentUser.getIdToken();
+    const res = await fetch(BROADCAST_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({ title, body, pin })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert('❌ ' + (data.error || 'صار خطأ فالإرسال'));
+    } else {
+      flashCopied(`✅ توصل لـ ${data.sent} هاتف${data.failed ? ' (فشل ' + data.failed + ')' : ''}`);
+      document.getElementById('broadcastTitle').value = '';
+      document.getElementById('broadcastBody').value = '';
+    }
+  } catch (err) {
+    console.error(err);
+    alert('❌ تعذر الاتصال بخدمة الإرسال، تأكد من الإنترنت وحاول مرة أخرى');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function flashCopied(text) {
+  document.getElementById('copiedMsg').textContent = text;
+  setTimeout(() => document.getElementById('copiedMsg').textContent = '', 3000);
+}
+
+/* ===================== الأجهزة المسجّلة للإشعارات =====================
+   كل جهاز ضغط "تفعيل الإشعارات" وسمح بالإذن كيسجّل توكن فقاعدة بيانات المتجر.
+   هذا كيوري للمسؤول عدد الأجهزة المسجّلة وآخر تحديث ليها. */
+function describeDevice(ua) {
+  ua = ua || '';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iPhone / iPad';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'Mac';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'جهاز';
+}
+
+function renderPushTokens() {
+  const summaryEl = document.getElementById('pushTokensSummary');
+  const listEl = document.getElementById('pushTokensList');
+  if (!summaryEl || !listEl) return;
+
+  const entries = Object.entries(fcmTokensData); // [ [token, {updatedAt, ua}], ... ]
+  summaryEl.innerHTML = `📱 ${entries.length} جهاز مسجّل`;
+
+  if (!entries.length) {
+    listEl.innerHTML = '<div class="empty">حتى جهاز واحد ما فعّل الإشعار بعد</div>';
+    return;
+  }
+
+  // نرتب الأحدث أولاً
+  entries.sort((a, b) => (b[1]?.updatedAt || 0) - (a[1]?.updatedAt || 0));
+
+  listEl.innerHTML = entries.map(([token, v]) => {
+    const when = v && v.updatedAt ? new Date(v.updatedAt).toLocaleDateString('ar') : '—';
+    return `<div class="list-item"><div>✅ ${esc(describeDevice(v && v.ua))}</div><div class="meta">${esc(when)}</div></div>`;
+  }).join('');
+}
+
+
+/* كشف متصفح واتساب/فيسبوك الداخلي (In-App Browser): هذا النوع من المتصفحات
+   لا يدعم واجهة الإشعارات إطلاقًا على آيفون، وأحيانًا يمسح التخزين المحلي
+   (localStorage) بين كل فتح للرابط، ولهذا التنبيهات ما توصل. */
+function isInAppBrowser() {
+  const ua = navigator.userAgent || '';
+  const looksLikeInApp = /FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|Twitter|TikTok|WhatsApp/i.test(ua);
+  const noNotificationSupport = !('Notification' in window);
+  // على آيفون: Safari الحقيقي يدعم Notification API دائمًا (حتى لو الإذن لسه ما انطلب)،
+  // فغيابها في آيفون علامة قوية إنه متصفح داخلي (واتساب/انستقرام) مو Safari.
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  return looksLikeInApp || (isIOS && noNotificationSupport);
+}
+
+function copyPageLink() {
+  const link = window.location.href;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(
+      () => flashCopied('✅ تم نسخ الرابط! افتح Safari والصقه'),
+      () => prompt('انسخ هذا الرابط وافتحه في Safari:', link)
+    );
+  } else {
+    prompt('انسخ هذا الرابط وافتحه في Safari:', link);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (isInAppBrowser()) {
+    const w = document.getElementById('inAppWarning');
+    if (w) w.style.display = 'block';
+  }
+});
+
+/* تسجيل الـ Service Worker: يخلي الإشعارات تطلع بشكل أقوى وأثبت (متل إشعارات أي تطبيق حقيقي)
+   طالما التطبيق مثبّت بالشاشة الرئيسية ومفتوح أو شغال بالخلفية. */
+let swReady = null;
+if ('serviceWorker' in navigator) {
+  swReady = navigator.serviceWorker.register('sw.js').then(reg => reg).catch(() => null);
+}
+
+function showStrongNotification(title, body, tag) {
+  if (swReady) {
+    swReady.then(reg => {
+      if (reg && reg.active) {
+        reg.active.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag });
+        return;
+      }
+      showPlainNotification(title, body);
+    }).catch(() => showPlainNotification(title, body));
+  } else {
+    showPlainNotification(title, body);
+  }
+}
+
+function showPlainNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification(title, { body, requireInteraction: true, icon: 'icon-192.png' });
+    n.onclick = () => { window.focus(); n.close(); };
+  }
+}
+
+/* اختبار سريع محلي: كيبعث إشعار فوري لهذا الهاتف بس (صوت + اهتزاز + تنبيه) باش تتأكد
+   أن الصلاحية والـ Service Worker خدامين. هذا اختبار محلي (التطبيق لازم يكون مفتوح أو
+   قريب من الخلفية) — ماشي اختبار push حقيقي من سيرفر والتطبيق مقفول بالكامل. */
+function testMyNotification() {
+  if (!('Notification' in window)) {
+    setPushStatus('⚠️ هذا المتصفح ما كيدعمش الإشعارات إطلاقًا');
+    return;
+  }
+  if (Notification.permission !== 'granted') {
+    setPushStatus('⚠️ خاصك تفعّل الإشعارات أولاً (وتسمح بالإذن) قبل الاختبار');
+    return;
+  }
+  showStrongNotification('🔔 إشعار تجريبي', 'إلى وصلك هذا الإشعار بصوت واهتزاز، كلشي خدام مزيان ✅', 'test-notification-' + Date.now());
+  setPushStatus('✅ تم إرسال إشعار تجريبي — تحقق من شاشتك الآن');
+}
+
+
+let pushEnabled = localStorage.getItem('pushEnabled') === '1';
+
+function updatePushStatusText() {
+  const st = document.getElementById('pushStatus');
+  if (st) st.textContent = pushEnabled ? '✅ الإشعارات مفعّلة في هذا الجهاز' : '⚠️ اضغط الزر لتفعيل الإشعارات';
+  const pb = document.getElementById('pushBanner');
+  if (pb) {
+    let dismissed = false;
+    try { dismissed = localStorage.getItem('pushBannerDismissed') === '1'; } catch (e) {}
+    pb.hidden = pushEnabled || dismissed;
+  }
+}
+
+function enablePushNotifications() {
+  pushEnabled = true;
+  localStorage.setItem('pushEnabled', '1');
+  updatePushStatusText();
+  registerPushToken(); // يطلب إذن الإشعارات ويسجل توكن هذا الجهاز (Push حقيقي حتى والتطبيق مقفول)
+}
+
+/* ملاحظة: loadAll() يستدعيها مستمع auth.onAuthStateChanged بعد التحقق من تسجيل دخول المتجر
+   (انظر أعلى الملف)، حتى لا تُقرأ/تُكتب أي بيانات قبل معرفة storeId الموثوق. */
+updateAdminUI();
+updatePushStatusText();
+</script>
+<div class="st-toast" id="stToast" role="status" aria-live="polite"></div>
+<script>
+/* واجهة لوحة تحكم المتجر فقط: تنقل بين الأقسام + رسالة "قيد التطوير". لا Firebase، لا قاعدة بيانات، لا إشعارات. */
+(function () {
+  var home = document.getElementById('stHome');
+  var toast = document.getElementById('stToast');
+  var toastTimer = null;
+
+  var dateEl = document.getElementById('storeDate');
+  if (dateEl) {
+    var now = new Date();
+    dateEl.textContent = (typeof formatDate === 'function') ? formatDate(now) : now.toLocaleDateString('ar-MA');
+  }
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2200);
+  }
+  window.stToast = showToast;
+  function hideAllPanels() {
+    document.querySelectorAll('#stPanels .st-panel').forEach(function (p) { p.hidden = true; });
+  }
+  function setNav(id) {
+    var items = document.querySelectorAll('.nav button[data-st-home], .nav button[data-nav]');
+    items.forEach(function (b) {
+      var on = id === 'home' ? b.hasAttribute('data-st-home') : b.getAttribute('data-nav') === id;
+      if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+  }
+  function openSection(id) {
+    var panel = document.getElementById('st-panel-' + id);
+    if (!panel) return;
+    hideAllPanels();
+    home.hidden = true;
+    panel.hidden = false;
+    setNav(id);
+    window.scrollTo(0, 0);
+  }
+  function backHome() {
+    hideAllPanels();
+    home.hidden = false;
+    setNav('home');
+    window.scrollTo(0, 0);
+  }
+
+  document.querySelectorAll('[data-st-open]').forEach(function (b) {
+    b.addEventListener('click', function () { openSection(b.getAttribute('data-st-open')); });
+  });
+  document.querySelectorAll('[data-st-back], [data-st-home]').forEach(function (b) {
+    b.addEventListener('click', backHome);
+  });
+  var pbClose = document.getElementById('pushBannerClose');
+  if (pbClose) pbClose.addEventListener('click', function () {
+    try { localStorage.setItem('pushBannerDismissed', '1'); } catch (e) {}
+    document.getElementById('pushBanner').hidden = true;
+  });
+  document.querySelectorAll('[data-st-soon]').forEach(function (b) {
+    b.addEventListener('click', function () { showToast(b.getAttribute('data-st-soon')); });
+  });
+})();
+</script>
+<script>
+/* نظام المنتجات: إضافة / تعديل / حذف / بحث / عرض — كله فـ localStorage.
+   ما فيه Firebase، لا شبكة، لا إشعارات. المفتاح: matjari.products.v1 */
+(function () {
+  'use strict';
+  /* عزل بيانات المتجر على نفس الجهاز: المفتاح مربوط بـ storeId (المتجر المسجَّل دخوله
+     آخر مرة على هذا الجهاز)، حتى لا تختلط منتجات متجر بمنتجات متجر آخر لو نفس
+     الجهاز استُعمل لأكثر من متجر. هذا namespace محلي فقط (راحة استخدام) —
+     العزل الحقيقي المفروض من السيرفر هو على بيانات Firebase عبر storeRef()/Rules. */
+  var STORE_NS = window.TAJIR_BOOT_NS || '_noStore';
+  var KEY = 'matjari.products.v1.' + STORE_NS;
+  var MAX_NUM = 1000000000;
+  var toast = window.stToast || function () {};
+  function $(id) { return document.getElementById(id); }
+
+  var el = {
+    toggle: $('prToggleForm'), form: $('prForm'), title: $('prFormTitle'),
+    name: $('prName'), category: $('prCategory'), buy: $('prBuy'), sell: $('prSell'), qty: $('prQty'),
+    error: $('prError'), cancel: $('prCancel'),
+    search: $('prSearch'), count: $('prCount'), list: $('prList'), catList: $('prCategoryList'), warn: $('prStorageWarn')
+  };
+  if (!el.form || !el.list) return;
+
+  var products = [];      // نسخة فالذاكرة من آخر قراءة
+  var editingId = null;   // id المنتج اللي كيتعدّل (null = إضافة)
+  var pendingDelete = null;
+  var corrupted = false;
+  var storageOK = true;
+
+  /* ---------- أدوات ---------- */
+  var AR_DIGITS = '٠١٢٣٤٥٦٧٨٩', FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+  function digits(s) {
+    return String(s)
+      .replace(/[٠-٩]/g, function (d) { return AR_DIGITS.indexOf(d); })
+      .replace(/[۰-۹]/g, function (d) { return FA_DIGITS.indexOf(d); });
+  }
+  /* توحيد النص للبحث: حروف صغيرة، بلا تشكيل، توحيد الألف والياء والتاء المربوطة */
+  function norm(s) {
+    return digits(s).toLowerCase()
+      .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+      .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+      .replace(/\s+/g, ' ').trim();
+  }
+  /* يرجع: null إلا كان فارغ، NaN إلا كان غير صالح، وإلا الرقم.
+     كيقبل الأرقام العربية والفاصلة العشرية (٫ أو ,) مثل 12,50 ، وفاصل الآلاف مثل 1,500 */
+  function parseNumber(raw) {
+    var s = digits(raw).replace(/[\s\u00A0\u066C]/g, '').replace(/\u066B/g, '.');
+    if (s === '') return null;
+    if (/^\d+,\d{1,2}$/.test(s)) s = s.replace(',', '.');
+    else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, '');
+    if (!/^(\d+(\.\d*)?|\.\d+)$/.test(s)) return NaN;
+    return Number(s);
+  }
+  function round2(n) { return Math.round(n * 100) / 100; }
+  function fmt(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function newId() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function h(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* ---------- التخزين ---------- */
+  function probeStorage() {
+    try { var k = KEY + '.probe'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; }
+    catch (e) { return false; }
+  }
+  function isValidRecord(p) {
+    return p && typeof p === 'object' && typeof p.id === 'string' &&
+      typeof p.name === 'string' && p.name.trim() !== '' &&
+      typeof p.buyPrice === 'number' && isFinite(p.buyPrice) &&
+      typeof p.sellPrice === 'number' && isFinite(p.sellPrice) &&
+      typeof p.qty === 'number' && isFinite(p.qty);
+  }
+  function load() {
+    var raw = null;
+    try { raw = localStorage.getItem(KEY); } catch (e) { return []; }
+    if (!raw) return [];
+    try {
+      var arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) throw new Error('not an array');
+      return arr.filter(isValidRecord).map(function (p) {
+        return {
+          id: p.id, name: p.name, category: typeof p.category === 'string' ? p.category : '',
+          buyPrice: p.buyPrice, sellPrice: p.sellPrice, qty: p.qty,
+          createdAt: p.createdAt || 0, updatedAt: p.updatedAt || 0
+        };
+      });
+    } catch (e) {
+      corrupted = true;
+      try { localStorage.setItem(KEY + '.corrupt', raw); } catch (e2) {}
+      return [];
+    }
+  }
+  function save(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list)); return true; }
+    catch (e) { toast('⚠️ تعذّر الحفظ: التخزين ممتلئ أو غير متاح'); return false; }
+  }
+  function indexById(list, id) {
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return i;
+    return -1;
+  }
+  function indexByName(list, name, exceptId) {
+    var n = norm(name);
+    for (var i = 0; i < list.length; i++) if (list[i].id !== exceptId && norm(list[i].name) === n) return i;
+    return -1;
+  }
+
+  /* ---------- النموذج ---------- */
+  function showError(msg) { el.error.textContent = msg || ''; }
+  function fail(msg, field) { return { ok: false, msg: msg, field: field }; }
+
+  function readForm() {
+    var name = el.name.value.replace(/\s+/g, ' ').trim();
+    var category = el.category.value.replace(/\s+/g, ' ').trim();
+    if (!name) return fail('اسم المنتج مطلوب', el.name);
+    if (name.length > 80) return fail('اسم المنتج طويل (الحد 80 حرفًا)', el.name);
+    if (category.length > 40) return fail('اسم التصنيف طويل (الحد 40 حرفًا)', el.category);
+
+    var buy = parseNumber(el.buy.value);
+    if (buy === null) return fail('أدخل سعر الشراء (يمكن أن يكون 0)', el.buy);
+    if (isNaN(buy) || buy > MAX_NUM) return fail('سعر الشراء غير صحيح — أدخل رقمًا موجبًا', el.buy);
+
+    var sell = parseNumber(el.sell.value);
+    if (sell === null) return fail('أدخل سعر البيع (يمكن أن يكون 0)', el.sell);
+    if (isNaN(sell) || sell > MAX_NUM) return fail('سعر البيع غير صحيح — أدخل رقمًا موجبًا', el.sell);
+
+    var qty = parseNumber(el.qty.value);
+    if (qty === null) return fail('أدخل الكمية (يمكن أن تكون 0)', el.qty);
+    if (isNaN(qty) || qty > MAX_NUM || Math.floor(qty) !== qty) return fail('الكمية يجب أن تكون عددًا صحيحًا (0 أو أكثر)', el.qty);
+
+    return { ok: true, data: { name: name, category: category, buyPrice: round2(buy), sellPrice: round2(sell), qty: qty } };
+  }
+
+  function clearFields() {
+    el.name.value = ''; el.category.value = ''; el.buy.value = ''; el.sell.value = ''; el.qty.value = '';
+  }
+  function openForm(product) {
+    editingId = product ? product.id : null;
+    el.title.textContent = product ? '✏️ تعديل المنتج' : '➕ منتج جديد';
+    if (product) {
+      el.name.value = product.name; el.category.value = product.category;
+      el.buy.value = String(product.buyPrice); el.sell.value = String(product.sellPrice); el.qty.value = String(product.qty);
+    } else {
+      clearFields();
+    }
+    showError('');
+    el.form.hidden = false;
+    el.toggle.textContent = '✖ إغلاق النموذج';
+    render();
+    try { el.form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+    el.name.focus();
+  }
+  function closeForm() {
+    editingId = null;
+    clearFields();
+    showError('');
+    el.form.hidden = true;
+    el.toggle.textContent = '➕ إضافة منتج';
+    render();
+  }
+
+  el.toggle.addEventListener('click', function () {
+    if (el.form.hidden) openForm(null); else closeForm();
+  });
+  el.cancel.addEventListener('click', closeForm);
+
+  el.form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var r = readForm();
+    if (!r.ok) { showError(r.msg); r.field.focus(); return; }
+    showError('');
+    var d = r.data;
+    var list = load(); // قراءة طازجة قبل الكتابة (لو تغيّر التخزين من تبويب آخر)
+    if (indexByName(list, d.name, editingId) !== -1) {
+      showError('يوجد منتج بنفس الاسم بالفعل'); el.name.focus(); return;
+    }
+    var now = Date.now();
+    var lossNote = d.sellPrice < d.buyPrice ? ' — ⚠️ سعر البيع أقل من سعر الشراء' : '';
+
+    if (editingId) {
+      var i = indexById(list, editingId);
+      if (i === -1) {
+        products = list; closeForm(); toast('⚠️ هذا المنتج لم يعد موجودًا (ربما حُذف)'); return;
+      }
+      list[i] = { id: list[i].id, name: d.name, category: d.category, buyPrice: d.buyPrice, sellPrice: d.sellPrice, qty: d.qty, createdAt: list[i].createdAt, updatedAt: now };
+      if (!save(list)) return;
+      products = list;
+      closeForm();
+      toast('✅ تم حفظ التعديل' + lossNote);
+    } else {
+      list.unshift({ id: newId(), name: d.name, category: d.category, buyPrice: d.buyPrice, sellPrice: d.sellPrice, qty: d.qty, createdAt: now, updatedAt: now });
+      if (!save(list)) return;
+      products = list;
+      clearFields();
+      el.search.value = '';
+      render();
+      toast('✅ تمت إضافة المنتج' + lossNote);
+      el.name.focus();
+    }
+  });
+
+  /* ---------- القائمة ---------- */
+  function cancelPendingDelete() {
+    if (!pendingDelete) return;
+    clearTimeout(pendingDelete.timer);
+    if (pendingDelete.btn) { pendingDelete.btn.textContent = '🗑️ حذف'; pendingDelete.btn.classList.remove('confirm'); }
+    pendingDelete = null;
+  }
+
+  el.list.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button[data-action]') : null;
+    if (!btn) return;
+    var id = btn.getAttribute('data-id');
+    var action = btn.getAttribute('data-action');
+
+    if (action === 'edit') {
+      cancelPendingDelete();
+      var i = indexById(products, id);
+      if (i === -1) { products = load(); render(); return; }
+      openForm(products[i]);
+      return;
+    }
+    if (action === 'delete') {
+      if (!pendingDelete || pendingDelete.id !== id) {
+        cancelPendingDelete();
+        btn.textContent = '⚠️ تأكيد الحذف؟';
+        btn.classList.add('confirm');
+        pendingDelete = { id: id, btn: btn, timer: setTimeout(cancelPendingDelete, 3500) };
+        return;
+      }
+      cancelPendingDelete();
+      var list = load();
+      var k = indexById(list, id);
+      if (k !== -1) {
+        list.splice(k, 1);
+        if (!save(list)) return;
+      }
+      products = list;
+      if (editingId === id) { closeForm(); } else { render(); }
+      toast('🗑️ تم حذف المنتج');
+    }
+  });
+
+  el.search.addEventListener('input', render);
+
+  function itemNode(p) {
+    var item = h('div', 'pr-item' + (p.id === editingId ? ' editing' : ''));
+    item.setAttribute('data-id', p.id);
+
+    var top = h('div', 'pr-item-top');
+    top.appendChild(h('div', 'pr-name', p.name));
+    top.appendChild(h('span', 'pr-cat' + (p.category ? '' : ' none'), p.category || 'بدون تصنيف'));
+    item.appendChild(top);
+
+    var stats = h('div', 'pr-stats');
+    [['شراء', p.buyPrice], ['بيع', p.sellPrice], ['الكمية', p.qty]].forEach(function (s) {
+      var box = h('div', 'pr-stat');
+      box.appendChild(h('span', null, s[0]));
+      box.appendChild(h('b', null, fmt(s[1])));
+      stats.appendChild(box);
+    });
+    item.appendChild(stats);
+
+    var badges = h('div');
+    if (p.sellPrice < p.buyPrice) badges.appendChild(h('span', 'pr-badge loss', '⚠️ البيع بأقل من الشراء'));
+    if (p.qty === 0) badges.appendChild(h('span', 'pr-badge out', '❌ نفدت الكمية'));
+    if (badges.childNodes.length) item.appendChild(badges);
+
+    var actions = h('div', 'pr-actions');
+    var edit = h('button', 'pr-btn', '✏️ تعديل');
+    edit.type = 'button'; edit.setAttribute('data-action', 'edit'); edit.setAttribute('data-id', p.id);
+    var del = h('button', 'pr-btn del', '🗑️ حذف');
+    del.type = 'button'; del.setAttribute('data-action', 'delete'); del.setAttribute('data-id', p.id);
+    actions.appendChild(edit); actions.appendChild(del);
+    item.appendChild(actions);
+    return item;
+  }
+
+  function renderCategories() {
+    var seen = {}, cats = [];
+    products.forEach(function (p) {
+      if (p.category && !seen[norm(p.category)]) { seen[norm(p.category)] = 1; cats.push(p.category); }
+    });
+    cats.sort(function (a, b) { return a.localeCompare(b, 'ar'); });
+    el.catList.textContent = '';
+    cats.forEach(function (c) { var o = document.createElement('option'); o.value = c; el.catList.appendChild(o); });
+  }
+  function renderWarn() {
+    var msg = '';
+    if (!storageOK) msg = '⚠️ التخزين المحلي غير متاح فهذا المتصفح (ربما الوضع الخاص) — لن تُحفظ المنتجات.';
+    else if (corrupted) msg = '⚠️ تعذّرت قراءة بيانات المنتجات المحفوظة (تالفة)، وتم حفظ نسخة احتياطية منها باسم ' + KEY + '.corrupt';
+    el.warn.textContent = msg;
+    el.warn.hidden = !msg;
+  }
+
+  function render() {
+    if (pendingDelete) { clearTimeout(pendingDelete.timer); pendingDelete = null; }
+    renderWarn();
+    renderCategories();
+
+    var tokens = norm(el.search.value);
+    tokens = tokens ? tokens.split(' ') : [];
+    var shown = products.filter(function (p) {
+      if (!tokens.length) return true;
+      var hay = norm(p.name + ' ' + p.category);
+      return tokens.every(function (t) { return hay.indexOf(t) !== -1; });
+    });
+
+    el.count.textContent = tokens.length
+      ? 'النتائج: ' + shown.length + ' من ' + products.length
+      : 'عدد المنتجات: ' + products.length;
+
+    el.list.textContent = '';
+    if (!shown.length) {
+      el.list.appendChild(h('div', 'empty', tokens.length ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد منتجات بعد — اضغط "➕ إضافة منتج" لإضافة أول منتج'));
+      return;
+    }
+    shown.forEach(function (p) { el.list.appendChild(itemNode(p)); });
+  }
+
+  /* تحديث تلقائي إلا تغيّر التخزين من تبويب آخر */
+  window.addEventListener('storage', function (e) {
+    if (e.key === KEY || e.key === null) { products = load(); render(); }
+  });
+
+  storageOK = probeStorage();
+  products = load();
+  render();
+})();
+</script>
+<script>
+/* نظام المخزون: عرض الكميات / إضافة / خصم / سجل الحركات / بحث / تنبيه النفاد — كله فـ localStorage.
+   ما فيه Firebase، لا شبكة، لا إشعارات.
+   - الكمية الحالية هي حقل qty فـ matjari.products.v1 (نفس بيانات قسم المنتجات، بدون نسخة ثانية).
+   - سجل الحركات فـ matjari.stockMoves.v1 (مفتاح مستقل، كل حركة لها id فريد وproductId).
+   - كل مفاتيح التخزين معرّفة فالسطرين التاليين فقط، باش يسهل لاحقًا ربطها بـ store_id عند التحويل لتعدد المتاجر. */
+(function () {
+  'use strict';
+  /* نفس namespace ديال storeId المستعمل فسكريبت المنتجات، باش القسمين يقرأو نفس المفتاح للمتجر نفسه */
+  var STORE_NS = window.TAJIR_BOOT_NS || '_noStore';
+  var PRODUCTS_KEY = 'matjari.products.v1.' + STORE_NS;
+  var MOVES_KEY = 'matjari.stockMoves.v1.' + STORE_NS;
+  var MAX_NUM = 1000000000;
+  var LOG_PAGE = 30;
+  var toast = window.stToast || function () {};
+  function $(id) { return document.getElementById(id); }
+
+  var el = {
+    warn: $('ivWarn'), alert: $('ivAlert'), search: $('ivSearch'),
+    chipAll: $('ivFilterAll'), chipOut: $('ivFilterOut'),
+    count: $('ivCount'), list: $('ivList'),
+    logCount: $('ivLogCount'), log: $('ivLog'), logMore: $('ivLogMore')
+  };
+  if (!el.list || !el.log) return;
+
+  var productsState = { ok: true, list: [], raw: null };
+  var products = [];        // منتجات صالحة للعرض
+  var moves = [];           // حركات صالحة للعرض (الأحدث أولًا)
+  var movesCorrupt = false;
+  var filter = 'all';       // all | out
+  var logLimit = LOG_PAGE;
+  var op = null;            // { id, type: 'add'|'deduct', draft, error } — العملية المفتوحة حاليًا
+
+  /* ---------- أدوات ---------- */
+  var AR_DIGITS = '٠١٢٣٤٥٦٧٨٩', FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+  function digits(s) {
+    return String(s)
+      .replace(/[٠-٩]/g, function (d) { return AR_DIGITS.indexOf(d); })
+      .replace(/[۰-۹]/g, function (d) { return FA_DIGITS.indexOf(d); });
+  }
+  function norm(s) {
+    return digits(s).toLowerCase()
+      .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+      .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+      .replace(/\s+/g, ' ').trim();
+  }
+  /* null إلا كان فارغ، NaN إلا كان غير صالح، وإلا الرقم (يقبل الأرقام العربية وفاصل الآلاف) */
+  function parseNumber(raw) {
+    var s = digits(raw).replace(/[\s\u00A0\u066C]/g, '').replace(/\u066B/g, '.');
+    if (s === '') return null;
+    if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, '');
+    if (!/^(\d+(\.\d*)?|\.\d+)$/.test(s)) return NaN;
+    return Number(s);
+  }
+  function round2(n) { return Math.round(n * 100) / 100; }
+  function fmt(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function newId() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function z2(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtDate(ts) {
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return '—';
+    return d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate()) + ' ' + z2(d.getHours()) + ':' + z2(d.getMinutes());
+  }
+  function h(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function fail(msg, gone) { return { ok: false, msg: msg, gone: !!gone }; }
+
+  /* ---------- قراءة التخزين ---------- */
+  function isValidProduct(p) {
+    return p && typeof p === 'object' && typeof p.id === 'string' &&
+      typeof p.name === 'string' && p.name.trim() !== '' &&
+      typeof p.buyPrice === 'number' && isFinite(p.buyPrice) &&
+      typeof p.sellPrice === 'number' && isFinite(p.sellPrice) &&
+      typeof p.qty === 'number' && isFinite(p.qty);
+  }
+  function isValidMove(m) {
+    return m && typeof m === 'object' && typeof m.id === 'string' && typeof m.productId === 'string' &&
+      typeof m.productName === 'string' && (m.type === 'add' || m.type === 'deduct') &&
+      typeof m.qty === 'number' && isFinite(m.qty) && typeof m.before === 'number' && isFinite(m.before) &&
+      typeof m.after === 'number' && isFinite(m.after) && typeof m.at === 'number' && isFinite(m.at);
+  }
+  /* يرجع المصفوفة الخام كما هي (بدون تصفية) باش ما نضيّعو أي سجل عند الكتابة */
+  function readProducts() {
+    var raw = null;
+    try { raw = localStorage.getItem(PRODUCTS_KEY); }
+    catch (e) { return { ok: false, unavailable: true, list: [], raw: null }; }
+    if (!raw) return { ok: true, list: [], raw: raw };
+    try {
+      var arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) throw new Error('not an array');
+      return { ok: true, list: arr, raw: raw };
+    } catch (e) {
+      return { ok: false, corrupt: true, list: [], raw: raw };
+    }
+  }
+  function readMovesRaw() {
+    var raw = null;
+    try { raw = localStorage.getItem(MOVES_KEY); } catch (e) { return { arr: [], corrupt: false }; }
+    if (!raw) return { arr: [], corrupt: false };
+    try {
+      var arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) throw new Error('not an array');
+      return { arr: arr, corrupt: false };
+    } catch (e) {
+      try { localStorage.setItem(MOVES_KEY + '.corrupt', raw); } catch (e2) {}
+      return { arr: [], corrupt: true };
+    }
+  }
+  function refresh() {
+    productsState = readProducts();
+    products = productsState.ok ? productsState.list.filter(isValidProduct) : [];
+    var mv = readMovesRaw();
+    movesCorrupt = mv.corrupt;
+    moves = mv.arr.filter(isValidMove);
+    if (op) {
+      var still = false;
+      for (var i = 0; i < products.length; i++) if (products[i].id === op.id) { still = true; break; }
+      if (!still) op = null;
+    }
+    render();
+  }
+
+  /* ---------- تنفيذ الحركة (إضافة/خصم) ---------- */
+  function applyMove(id, type, amount) {
+    var pr = readProducts(); // قراءة طازجة قبل الكتابة (لو تغيّر التخزين من تبويب آخر)
+    if (!pr.ok) return fail(pr.unavailable ? 'التخزين المحلي غير متاح فهذا المتصفح' : 'بيانات المنتجات المحفوظة تالفة — لا يمكن تعديل المخزون');
+    var arr = pr.list, i = -1;
+    for (var k = 0; k < arr.length; k++) {
+      if (arr[k] && arr[k].id === id && isValidProduct(arr[k])) { i = k; break; }
+    }
+    if (i === -1) return fail('هذا المنتج لم يعد موجودًا (ربما حُذف)', true);
+
+    var cur = arr[i].qty;
+    if (type === 'deduct') {
+      if (amount > cur) return fail('لا يمكن خصم ' + fmt(amount) + ' — الكمية المتوفرة ' + fmt(cur) + ' فقط');
+    } else if (cur + amount > MAX_NUM) {
+      return fail('الكمية الناتجة كبيرة جدًا (الحد الأقصى ' + fmt(MAX_NUM) + ')');
+    }
+    var after = round2(type === 'add' ? cur + amount : cur - amount);
+    if (after < 0) return fail('لا يمكن أن تصبح الكمية أقل من صفر');
+
+    var now = Date.now();
+    var name = arr[i].name;
+    arr[i].qty = after;           // نعدّل qty وupdatedAt فقط، وباقي حقول المنتج وباقي المنتجات تبقى كما هي
+    arr[i].updatedAt = now;
+    try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(arr)); }
+    catch (e) { return fail('⚠️ تعذّر الحفظ: التخزين ممتلئ أو غير متاح'); }
+
+    var mv = readMovesRaw();
+    mv.arr.unshift({ id: newId(), productId: id, productName: name, type: type, qty: amount, before: cur, after: after, at: now });
+    try { localStorage.setItem(MOVES_KEY, JSON.stringify(mv.arr)); }
+    catch (e) {
+      // ما قدرناش نسجّل الحركة: نرجّع الكمية القديمة باش ما يبقى تغيير بلا سجل
+      try { localStorage.setItem(PRODUCTS_KEY, pr.raw); } catch (e2) {}
+      return fail('⚠️ تعذّر حفظ سجل الحركة — أُلغيت العملية ولم تتغير الكمية');
+    }
+    return { ok: true, name: name, before: cur, after: after };
+  }
+
+  /* ---------- العرض ---------- */
+  function renderWarn() {
+    var msgs = [];
+    if (productsState.unavailable) msgs.push('⚠️ التخزين المحلي غير متاح فهذا المتصفح (ربما الوضع الخاص) — لن يُحفظ المخزون.');
+    else if (productsState.corrupt) msgs.push('⚠️ تعذّرت قراءة بيانات المنتجات المحفوظة (تالفة)، لذلك تم إيقاف تعديل المخزون.');
+    if (movesCorrupt) msgs.push('⚠️ تعذّرت قراءة سجل الحركات القديم (تالف)، وتم حفظ نسخة احتياطية منه باسم ' + MOVES_KEY + '.corrupt');
+    el.warn.textContent = msgs.join(' ');
+    el.warn.hidden = !msgs.length;
+  }
+
+  function renderAlert() {
+    var outs = products.filter(function (p) { return p.qty <= 0; });
+    if (!outs.length) { el.alert.textContent = ''; el.alert.hidden = true; return; }
+    var names = outs.slice(0, 5).map(function (p) { return '«' + p.name + '»'; }).join('، ');
+    var more = outs.length > 5 ? ' و' + (outs.length - 5) + ' أخرى' : '';
+    el.alert.textContent = '⚠️ تنبيه: ' + (outs.length === 1 ? 'منتج واحد نفدت كميته (0): ' : outs.length + ' منتجات نفدت كميتها (0): ') + names + more;
+    el.alert.hidden = false;
+  }
+
+  function renderChips() {
+    var outCount = products.filter(function (p) { return p.qty <= 0; }).length;
+    el.chipOut.textContent = '❌ النافدة (' + outCount + ')';
+    el.chipAll.classList.toggle('active', filter === 'all');
+    el.chipOut.classList.toggle('active', filter === 'out');
+  }
+
+  function opForm(p) {
+    var isAdd = op.type === 'add';
+    var form = h('form', 'iv-op');
+    form.noValidate = true;
+    form.setAttribute('data-id', p.id);
+    form.appendChild(h('div', 'iv-op-title', (isAdd ? '➕ إضافة كمية' : '➖ خصم كمية') + ' — الكمية الحالية: ' + fmt(p.qty)));
+    var label = h('label', null, isAdd ? 'الكمية المراد إضافتها' : 'الكمية المراد خصمها');
+    label.setAttribute('for', 'ivQty');
+    form.appendChild(label);
+    var input = document.createElement('input');
+    input.type = 'text'; input.id = 'ivQty'; input.setAttribute('inputmode', 'numeric');
+    input.autocomplete = 'off'; input.placeholder = '0'; input.value = op.draft || '';
+    form.appendChild(input);
+    var err = h('div', 'pr-error', op.error || '');
+    err.id = 'ivOpError'; err.setAttribute('role', 'alert');
+    form.appendChild(err);
+    var actions = h('div', 'pr-form-actions');
+    var ok = h('button', 'btn small', isAdd ? '✅ تأكيد الإضافة' : '✅ تأكيد الخصم');
+    ok.type = 'submit';
+    var cancel = h('button', 'btn small secondary', 'إلغاء');
+    cancel.type = 'button'; cancel.setAttribute('data-action', 'cancel-op');
+    actions.appendChild(ok); actions.appendChild(cancel);
+    form.appendChild(actions);
+    return form;
+  }
+
+  function itemNode(p) {
+    var open = op && op.id === p.id;
+    var item = h('div', 'pr-item' + (open ? ' op-open' : ''));
+    item.setAttribute('data-id', p.id);
+
+    var top = h('div', 'pr-item-top');
+    top.appendChild(h('div', 'pr-name', p.name));
+    top.appendChild(h('span', 'pr-cat' + (p.category ? '' : ' none'), p.category || 'بدون تصنيف'));
+    item.appendChild(top);
+
+    var q = h('div', 'iv-qty' + (p.qty <= 0 ? ' zero' : ''));
+    q.appendChild(h('span', null, 'الكمية الحالية'));
+    q.appendChild(h('b', null, fmt(p.qty)));
+    item.appendChild(q);
+
+    if (p.qty <= 0) {
+      var badges = h('div');
+      badges.appendChild(h('span', 'pr-badge out', '❌ نفدت الكمية'));
+      item.appendChild(badges);
+    }
+
+    var actions = h('div', 'pr-actions');
+    var add = h('button', 'pr-btn add', '➕ إضافة كمية');
+    add.type = 'button'; add.setAttribute('data-action', 'add'); add.setAttribute('data-id', p.id);
+    var sub = h('button', 'pr-btn sub', '➖ خصم كمية');
+    sub.type = 'button'; sub.setAttribute('data-action', 'deduct'); sub.setAttribute('data-id', p.id);
+    actions.appendChild(add); actions.appendChild(sub);
+    item.appendChild(actions);
+
+    if (open) item.appendChild(opForm(p));
+    return item;
+  }
+
+  function renderList() {
+    var tokens = norm(el.search.value);
+    tokens = tokens ? tokens.split(' ') : [];
+    var base = filter === 'out' ? products.filter(function (p) { return p.qty <= 0; }) : products;
+    var shown = base.filter(function (p) {
+      if (!tokens.length) return true;
+      var hay = norm(p.name + ' ' + p.category);
+      return tokens.every(function (t) { return hay.indexOf(t) !== -1; });
+    });
+
+    el.count.textContent = (tokens.length || filter === 'out')
+      ? 'النتائج: ' + shown.length + ' من ' + products.length
+      : 'عدد المنتجات: ' + products.length;
+
+    el.list.textContent = '';
+    if (!shown.length) {
+      var msg;
+      if (!products.length) msg = 'لا توجد منتجات بعد — أضف منتجات من قسم «المنتجات» أولًا';
+      else if (tokens.length) msg = 'لا توجد نتائج مطابقة للبحث';
+      else msg = '✅ لا توجد منتجات نافدة';
+      el.list.appendChild(h('div', 'empty', msg));
+      return;
+    }
+    shown.forEach(function (p) { el.list.appendChild(itemNode(p)); });
+  }
+
+  function logNode(m) {
+    var isAdd = m.type === 'add';
+    var row = h('div', 'iv-log-item');
+    row.appendChild(h('span', 'iv-log-ic ' + m.type, isAdd ? '➕' : '➖'));
+    var main = h('div', 'iv-log-main');
+    main.appendChild(h('div', 'iv-log-name', m.productName));
+    var meta = h('div', 'iv-log-meta');
+    meta.appendChild(document.createTextNode((isAdd ? 'إضافة' : 'خصم') + ' · قبل: ' + fmt(m.before) + ' · بعد: ' + fmt(m.after)));
+    meta.appendChild(document.createElement('br'));
+    meta.appendChild(h('span', 'iv-date', fmtDate(m.at)));
+    main.appendChild(meta);
+    row.appendChild(main);
+    row.appendChild(h('b', 'iv-log-qty ' + m.type, (isAdd ? '+' : '−') + fmt(m.qty)));
+    return row;
+  }
+
+  function renderLog() {
+    el.logCount.textContent = moves.length ? 'عدد الحركات: ' + moves.length : '';
+    el.log.textContent = '';
+    if (!moves.length) {
+      el.log.appendChild(h('div', 'empty', 'لا توجد حركات بعد — تظهر هنا كل عمليات الإضافة والخصم'));
+      el.logMore.hidden = true;
+      return;
+    }
+    moves.slice(0, logLimit).forEach(function (m) { el.log.appendChild(logNode(m)); });
+    el.logMore.hidden = moves.length <= logLimit;
+  }
+
+  function render() {
+    renderWarn();
+    renderAlert();
+    renderChips();
+    renderList();
+    renderLog();
+  }
+
+  /* ---------- التفاعل ---------- */
+  function focusQty() {
+    var inp = $('ivQty');
+    if (!inp) return;
+    try { inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+    inp.focus();
+  }
+
+  el.list.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button[data-action]') : null;
+    if (!btn) return;
+    var action = btn.getAttribute('data-action');
+    if (action === 'cancel-op') { op = null; render(); return; }
+    if (action !== 'add' && action !== 'deduct') return;
+    var id = btn.getAttribute('data-id');
+    if (op && op.id === id && op.type === action) { op = null; render(); return; } // ضغطة ثانية = إغلاق
+    op = { id: id, type: action, draft: '', error: '' };
+    render();
+    focusQty();
+  });
+
+  el.list.addEventListener('input', function (e) {
+    if (!op || !e.target || e.target.id !== 'ivQty') return;
+    op.draft = e.target.value;
+    if (op.error) { op.error = ''; var er = $('ivOpError'); if (er) er.textContent = ''; }
+  });
+
+  el.list.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!op) return;
+    var inp = $('ivQty');
+    var er = $('ivOpError');
+    function showErr(msg) { op.error = msg; if (er) er.textContent = msg; if (inp) inp.focus(); }
+
+    var n = parseNumber(inp ? inp.value : '');
+    if (n === null) return showErr('أدخل الكمية');
+    if (isNaN(n) || n <= 0 || Math.floor(n) !== n) return showErr('الكمية يجب أن تكون عددًا صحيحًا أكبر من 0');
+    if (n > MAX_NUM) return showErr('الكمية كبيرة جدًا (الحد الأقصى ' + fmt(MAX_NUM) + ')');
+
+    var r = applyMove(op.id, op.type, n);
+    if (!r.ok) {
+      if (r.gone) { op = null; refresh(); toast(r.msg); return; }
+      showErr(r.msg);
+      return;
+    }
+    var wasAdd = op.type === 'add';
+    op = null;
+    refresh();
+    toast((wasAdd ? '✅ تمت إضافة ' : '✅ تم خصم ') + fmt(n) + ' — «' + r.name + '»: الكمية الآن ' + fmt(r.after));
+  });
+
+  el.search.addEventListener('input', render);
+
+  [el.chipAll, el.chipOut].forEach(function (b) {
+    b.addEventListener('click', function () { filter = b.getAttribute('data-iv-filter'); render(); });
+  });
+
+  el.logMore.addEventListener('click', function () { logLimit += LOG_PAGE; renderLog(); });
+
+  /* كل مرة كيتفتح قسم المخزون نقرأ آخر بيانات المنتجات (ممكن تكون تغيّرت فقسم المنتجات) */
+  var tile = document.querySelector('[data-st-open="inventory"]');
+  if (tile) tile.addEventListener('click', function () {
+    op = null; logLimit = LOG_PAGE; el.search.value = ''; filter = 'all';
+    refresh();
+  });
+
+  /* تحديث تلقائي إلا تغيّر التخزين من تبويب آخر */
+  window.addEventListener('storage', function (e) {
+    if (e.key === PRODUCTS_KEY || e.key === MOVES_KEY || e.key === null) refresh();
+  });
+
+  refresh();
+})();
+</script>
+</body>
+</html>
