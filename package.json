@@ -1,18 +1,1 @@
-{
-  "name": "tajirapp",
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "firebase-admin": "^12.6.0"
-  },
-  "devDependencies": {
-    "@firebase/rules-unit-testing": "^3.0.4",
-    "firebase-tools": "^13.0.0"
-  },
-  "scripts": {
-    "test:inventory": "node tests/inventory-logic.test.js",
-    "test:rules": "firebase emulators:exec --only database \"node tests/security-rules.test.js\"",
-    "create-store": "node scripts/create-store.js",
-    "migrate-store": "node scripts/migrate-root-to-store.js"
-  }
-}
+
